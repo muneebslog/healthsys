@@ -16,6 +16,14 @@
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                @if (in_array(auth()->user()->role->value, ['staff', 'admin'], true))
+                    <flux:sidebar.group :heading="__('Reception')" class="grid">
+                        <flux:sidebar.item icon="clock" :href="route('reception.shifts')" :current="request()->routeIs('reception.shifts')" wire:navigate>
+                            {{ __('Shift') }}
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endif
             </flux:sidebar.nav>
 
             <flux:spacer />
