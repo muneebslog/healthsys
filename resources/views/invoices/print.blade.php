@@ -8,7 +8,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-            font-size: 11px;
+            font-size: 12px;
             line-height: 1.35;
             color: #111;
             background: #fff;
@@ -78,7 +78,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10px;
+            font-size: 11px;
             margin-top: 4px;
         }
         th, td {
@@ -89,7 +89,7 @@
         }
         th {
             font-weight: 700;
-            font-size: 9px;
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: #333;
@@ -125,7 +125,7 @@
         .rx-handwriting-block {
             margin-top: 14px;
             padding-top: 8px;
-            font-size: 11px;
+            font-size: 12px;
             line-height: 1.4;
         }
         .rx-vitals-row {
@@ -163,7 +163,7 @@
             margin-top: 16px;
             padding-top: 10px;
             border-top: 1px dashed #999;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             color: #333;
         }
