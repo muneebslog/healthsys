@@ -19,7 +19,7 @@
     <div class="grid gap-6 lg:grid-cols-2">
         @foreach ($sections as $section)
             <section class="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-                <div class="{{ $section['headerGradientClass'] }} border-b border-zinc-200/60 px-6 py-5 dark:border-zinc-800">
+                <div class="{{ $section['headerGradientClass'] }} border-b border-zinc-200/60 px-6 py-5 dark:border-zinc-800/60">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div class="min-w-0">
                             <flux:heading size="lg" class="tracking-tight text-zinc-900 dark:text-white">

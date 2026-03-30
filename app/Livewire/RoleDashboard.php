@@ -30,7 +30,7 @@ class RoleDashboard extends Component
                 'title' => __('Reception'),
                 'description' => __('Shift and patient flow tools.'),
                 'badgeColor' => 'emerald',
-                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-emerald-50/40',
+                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-emerald-50/40 dark:from-zinc-900 dark:via-zinc-950 dark:to-emerald-950/25',
                 'items' => [
                     [
                         'key' => 'reception.shifts',
@@ -74,7 +74,7 @@ class RoleDashboard extends Component
                 'title' => __('Owner'),
                 'description' => __('Shift history and daily totals.'),
                 'badgeColor' => 'amber',
-                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-amber-50/35',
+                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-amber-50/35 dark:from-zinc-900 dark:via-zinc-950 dark:to-amber-950/25',
                 'items' => [
                     [
                         'key' => 'owner.shifts',
@@ -90,7 +90,7 @@ class RoleDashboard extends Component
                 'title' => __('Doctor'),
                 'description' => __('Your profile, payouts, and today queue.'),
                 'badgeColor' => 'emerald',
-                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-emerald-50/35',
+                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-emerald-50/35 dark:from-zinc-900 dark:via-zinc-950 dark:to-emerald-950/25',
                 'items' => [
                     [
                         'key' => 'doctor.dashboard',
@@ -127,7 +127,7 @@ class RoleDashboard extends Component
                 'title' => __('Admin'),
                 'description' => __('Setup core data and users.'),
                 'badgeColor' => 'rose',
-                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-rose-50/40',
+                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-rose-50/40 dark:from-zinc-900 dark:via-zinc-950 dark:to-rose-950/25',
                 'items' => [
                     [
                         'key' => 'admin.services',
@@ -164,7 +164,7 @@ class RoleDashboard extends Component
                 'title' => __('Finance manager'),
                 'description' => __('Dashboard items can be added over time.'),
                 'badgeColor' => 'violet',
-                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-violet-50/35',
+                'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-violet-50/35 dark:from-zinc-900 dark:via-zinc-950 dark:to-violet-950/25',
                 'items' => [],
             ],
         ];
