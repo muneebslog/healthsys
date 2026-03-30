@@ -45,6 +45,11 @@ class InvoicePrintController extends Controller
         $lineDiscountSum = (int) $invoice->services->sum('discount');
         $discountAmount = $invoiceLevelDiscount > 0 ? $invoiceLevelDiscount : $lineDiscountSum;
 
+        /** @see DatabaseSeeder::seedDefaultServices id 2 = General Checkup — extra slip space for vitals + Rx */
+        $showRxHandwritingBlock = $invoice->services->contains(
+            fn ($is) => (int) $is->service_id === 2
+        );
+
         return view('invoices.print', [
             'clinicName' => config('hms.clinic_name', 'MMC'),
             'invoice' => $invoice,
@@ -52,6 +57,7 @@ class InvoicePrintController extends Controller
             'printedAt' => $invoice->created_at->timezone(config('app.timezone')),
             'showDiscountRow' => $discountAmount > 0,
             'discountAmount' => $discountAmount,
+            'showRxHandwritingBlock' => $showRxHandwritingBlock,
         ]);
     }
 }

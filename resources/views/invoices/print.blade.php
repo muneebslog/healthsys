@@ -122,6 +122,42 @@
             font-weight: 900;
             letter-spacing: -0.02em;
         }
+        .rx-handwriting-block {
+            margin-top: 14px;
+            padding-top: 8px;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        .rx-vitals-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .rx-vitals-field {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            flex: 1;
+            min-width: 0;
+        }
+        .rx-vitals-field span:first-child {
+            white-space: nowrap;
+        }
+        .rx-vitals-line {
+            flex: 1;
+            border-bottom: 1px dotted #999;
+            min-height: 1.2em;
+        }
+        .rx-heading {
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .rx-line {
+            border-bottom: 1px dotted #bbb;
+            min-height: 1.35em;
+            margin-bottom: 5px;
+        }
         .footer {
             text-align: center;
             margin-top: 16px;
@@ -213,6 +249,25 @@
         <span class="total-label">{{ __('Total') }}</span>
         <span class="total-amount">{{ number_format((int) $invoice->final_amount) }}</span>
     </div>
+
+    @if ($showRxHandwritingBlock ?? false)
+        <div class="rx-handwriting-block" aria-hidden="true">
+            <div class="rx-vitals-row">
+                <div class="rx-vitals-field">
+                    <span>temp:</span>
+                    <span class="rx-vitals-line"></span>
+                </div>
+                <div class="rx-vitals-field">
+                    <span>BP:</span>
+                    <span class="rx-vitals-line"></span>
+                </div>
+            </div>
+            <div class="rx-heading">Rx.</div>
+            @for ($i = 0; $i < 8; $i++)
+                <div class="rx-line"></div>
+            @endfor
+        </div>
+    @endif
 
     <div class="footer">{{ __('Thank you') }}</div>
 
