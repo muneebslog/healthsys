@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Models\Queue;
 use App\Models\Shift;
 use App\Models\ShiftExpense;
+use App\Services\ShiftCloseSmsNotifier;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
@@ -27,7 +28,7 @@ new #[Title('Shift')] class extends Component
     {
         $role = Auth::user()->role;
 
-        if (! in_array($role, [UserRole::Staff, UserRole::Admin], true)) {
+        if (! config('hms.skip_role_page_guards') && ! in_array($role, [UserRole::Staff, UserRole::Admin], true)) {
             abort(403);
         }
     }
@@ -154,7 +155,7 @@ new #[Title('Shift')] class extends Component
             return;
         }
 
-        DB::transaction(function () use ($shift): void {
+        $closedShiftId = DB::transaction(function () use ($shift): ?int {
             $locked = Shift::query()
                 ->whereKey($shift->id)
                 ->where('status', ShiftStatus::Open)
@@ -162,7 +163,7 @@ new #[Title('Shift')] class extends Component
                 ->first();
 
             if (! $locked) {
-                return;
+                return null;
             }
 
             $this->closeActiveQueuesForResetType(QueueResetType::PerShift);
@@ -172,11 +173,17 @@ new #[Title('Shift')] class extends Component
                 'closed_by' => Auth::id(),
                 'closed_at' => now(),
             ]);
+
+            return $locked->id;
         });
 
         $this->showCloseModal = false;
         unset($this->activeShift);
         unset($this->recentClosedShifts);
+
+        if ($closedShiftId !== null) {
+            app(ShiftCloseSmsNotifier::class)->notifyClosedShift($closedShiftId);
+        }
     }
 
     protected function closeActiveQueuesForResetType(QueueResetType $type): void

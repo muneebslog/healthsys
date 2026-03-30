@@ -68,7 +68,7 @@ class Shift extends Model
 
     public function totalDoctorPayouts(): int
     {
-        return (int) Invoice::whereIn('id', $this->invoices()->pluck('id'))
+        return (int) Invoice::whereIn('invoices.id', $this->invoices()->pluck('id'))
             ->join('invoice_services', 'invoices.id', '=', 'invoice_services.invoice_id')
             ->sum('invoice_services.doctor_share_amount');
     }

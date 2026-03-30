@@ -17,10 +17,67 @@
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
-                @if (in_array(auth()->user()->role->value, ['staff', 'admin'], true))
+                @if (config('hms.skip_role_page_guards') || in_array(auth()->user()->role->value, ['staff', 'admin'], true))
                     <flux:sidebar.group :heading="__('Reception')" class="grid">
                         <flux:sidebar.item icon="clock" :href="route('reception.shifts')" :current="request()->routeIs('reception.shifts')" wire:navigate>
                             {{ __('Shift') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="ticket" :href="route('reception.walk-in')" :current="request()->routeIs('reception.walk-in')" wire:navigate>
+                            {{ __('Walk-in') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="calendar-days" :href="route('reception.appointments')" :current="request()->routeIs('reception.appointments')" wire:navigate>
+                            {{ __('Appointments') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="currency-dollar" :href="route('reception.doctor-share-out')" :current="request()->routeIs('reception.doctor-share-out')" wire:navigate>
+                            {{ __('Doc share out') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="numbered-list" :href="route('queues.index')" :current="request()->routeIs('queues.index') || request()->routeIs('queues.control')" wire:navigate>
+                            {{ __('Queues') }}
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endif
+
+                @if (config('hms.skip_role_page_guards') || auth()->user()->role->value === 'owner')
+                    <flux:sidebar.group :heading="__('Owner')" class="grid">
+                        <flux:sidebar.item icon="chart-bar" :href="route('owner.shifts')" :current="request()->routeIs('owner.shifts') || request()->routeIs('owner.shifts.show')" wire:navigate>
+                            {{ __('Shifts') }}
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endif
+
+                @if (
+                    auth()->user()->role->value === 'doctor'
+                    || (config('hms.skip_role_page_guards') && auth()->user()->doctor)
+                )
+                    <flux:sidebar.group :heading="__('Doctor')" class="grid">
+                        <flux:sidebar.item icon="home" :href="route('doctor.dashboard')" :current="request()->routeIs('doctor.dashboard')" wire:navigate>
+                            {{ __('Doctor home') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="user" :href="route('doctor.profile')" :current="request()->routeIs('doctor.profile')" wire:navigate>
+                            {{ __('My profile') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="currency-dollar" :href="route('doctor.payouts')" :current="request()->routeIs('doctor.payouts')" wire:navigate>
+                            {{ __('My payouts') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="numbered-list" :href="route('doctor.queue')" :current="request()->routeIs('doctor.queue')" wire:navigate>
+                            {{ __('Today’s queue') }}
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endif
+
+                @if (config('hms.skip_role_page_guards') || auth()->user()->role->value === 'admin')
+                    <flux:sidebar.group :heading="__('Admin')" class="grid">
+                        <flux:sidebar.item icon="rectangle-stack" :href="route('admin.services')" :current="request()->routeIs('admin.services')" wire:navigate>
+                            {{ __('Services') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="user-group" :href="route('admin.doctors')" :current="request()->routeIs('admin.doctors')" wire:navigate>
+                            {{ __('Doctors') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="users" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>
+                            {{ __('Users') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="currency-dollar" :href="route('admin.service-prices')" :current="request()->routeIs('admin.service-prices')" wire:navigate>
+                            {{ __('Service prices') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif

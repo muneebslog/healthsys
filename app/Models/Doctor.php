@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,13 +10,33 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Doctor extends Model
 {
-    protected $fillable = ['name', 'specialization', 'phone', 'status', 'is_on_payroll', 'user_id'];
+    protected $fillable = [
+        'name', 'specialization', 'phone', 'start_time', 'end_time',
+        'status', 'is_on_payroll', 'user_id',
+    ];
 
     protected function casts(): array
     {
         return [
             'is_on_payroll' => 'boolean',
         ];
+    }
+
+    /**
+     * Whether this doctor has valid working hours for the appointments grid.
+     */
+    public function hasWorkingHours(): bool
+    {
+        if ($this->start_time === null || $this->start_time === ''
+            || $this->end_time === null || $this->end_time === '') {
+            return false;
+        }
+
+        $day = '2000-01-01';
+        $start = Carbon::parse($day.' '.$this->start_time);
+        $end = Carbon::parse($day.' '.$this->end_time);
+
+        return $end->gt($start);
     }
 
     public function servicePrices(): HasMany

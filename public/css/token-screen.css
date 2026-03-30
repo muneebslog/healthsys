@@ -1,0 +1,270 @@
+/* Token display — full viewport (vh/vw), high contrast, old WebView / Android TV */
+
+html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
+}
+
+/* .ts-panel uses display:flex; without this, [hidden] is overridden and both views show */
+[hidden] {
+    display: none !important;
+}
+
+.ts-body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    min-width: 100vw;
+    min-height: 100vh;
+    height: 100vh;
+    background: #07090c;
+    color: #e8eaed;
+    font-family: Georgia, "Times New Roman", Times, serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.ts-root {
+    width: 100vw;
+    min-width: 100vw;
+    min-height: 100vh;
+    height: 100vh;
+    margin: 0;
+    padding: 2vh 3vw 8vh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    background:
+        radial-gradient(ellipse 120vw 80vh at 50vw -15vh, rgba(255, 176, 32, 0.08), transparent 55%),
+        linear-gradient(180deg, #0a0d12 0%, #07090c 45%, #050608 100%);
+}
+
+.ts-panel {
+    width: 100%;
+    max-width: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Queue picker — fills width, scrolls if many queues */
+.ts-picker {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ts-header {
+    text-align: center;
+    margin-bottom: 3vh;
+    flex-shrink: 0;
+}
+
+.ts-clinic {
+    margin: 0;
+    font-size: clamp(3.5vw, 2.2vh + 1.5vw, 4.5vw);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #c9ced6;
+}
+
+.ts-sub {
+    margin: 1vh 0 0;
+    font-size: clamp(2.2vw, 1.2vh + 1vw, 2.8vw);
+    color: #7a828d;
+}
+
+.ts-picker-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(32vw, 1fr));
+    gap: clamp(1.5vw, 1.5vh, 2vw);
+    width: 100%;
+}
+
+.ts-card {
+    display: block;
+    width: 100%;
+    padding: 2.2vh 2.5vw;
+    border: max(0.15vw, 1px) solid rgba(255, 176, 32, 0.35);
+    border-radius: 0.4vw;
+    background: rgba(18, 22, 30, 0.92);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.ts-card:hover,
+.ts-card:focus {
+    outline: none;
+    border-color: #ffb020;
+    background: rgba(28, 34, 46, 0.98);
+    transform: translateY(-0.2vh);
+}
+
+.ts-card-doctor {
+    font-size: clamp(2.8vw, 1.8vh + 1.2vw, 3.6vw);
+    font-weight: 700;
+    margin: 0 0 0.6vh;
+    color: #f2f4f7;
+}
+
+.ts-card-service {
+    margin: 0;
+    font-size: clamp(2.2vw, 1vh + 1vw, 2.6vw);
+    color: #9aa3b2;
+}
+
+.ts-card-meta {
+    margin: 1.4vh 0 0;
+    font-size: clamp(1.8vw, 0.8vh + 0.8vw, 2.2vw);
+    color: #ffb020;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.ts-center {
+    text-align: center;
+}
+
+.ts-muted {
+    color: #6b7380;
+    font-size: clamp(2.2vw, 1vh + 1vw, 2.6vw);
+}
+
+.ts-error {
+    color: #ff6b6b;
+    font-size: clamp(2vw, 0.9vh + 0.9vw, 2.4vw);
+    margin-top: 2vh;
+    flex-shrink: 0;
+}
+
+/* Display — centered in full viewport */
+.ts-display {
+    text-align: center;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2vh 4vw;
+    width: 100%;
+    min-height: 0;
+}
+
+.ts-display-head {
+    margin-bottom: 2vh;
+    flex-shrink: 0;
+    width: 100%;
+}
+
+.ts-doctor {
+    margin: 0;
+    font-size: clamp(3vw, 2vh + 1.5vw, 4.2vw);
+    font-weight: 700;
+    color: #dfe3ea;
+    letter-spacing: 0.02em;
+}
+
+.ts-service {
+    margin: 1vh 0 0;
+    font-size: clamp(2.4vw, 1.2vh + 1vw, 3.2vw);
+    color: #8f98a8;
+}
+
+.ts-now-label {
+    margin: 3vh 0 0.8vh;
+    font-size: clamp(1.8vw, 0.9vh + 0.7vw, 2.4vw);
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: #ffb020;
+    flex-shrink: 0;
+}
+
+.ts-patient {
+    margin: 1vh 0 1.2vh;
+    font-size: clamp(2.8vw, 1.5vh + 1.2vw, 4vw);
+    font-weight: 700;
+    color: #f2f4f7;
+    flex-shrink: 0;
+    max-width: 92vw;
+    line-height: 1.25;
+}
+
+/* Token number: scales with both width and height so TVs and phones stay balanced */
+.ts-token {
+    margin: 0;
+    font-family: Impact, Haettenschweiler, "Arial Narrow Bold", "Franklin Gothic Bold", sans-serif;
+    font-size: min(32vw, 42vh);
+    line-height: 1;
+    font-weight: 400;
+    color: #ffb020;
+    text-shadow: 0 0 min(4vw, 5vh) rgba(255, 176, 32, 0.25);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+    max-width: 96vw;
+    word-break: break-all;
+}
+
+.ts-waiting {
+    margin: 3vh 0 0;
+    font-size: clamp(2.6vw, 1.4vh + 1vw, 3.4vw);
+    color: #a8b0bf;
+    flex-shrink: 0;
+}
+
+/* Kiosk controls — sized and placed with vh/vw */
+.ts-kiosk {
+    position: fixed;
+    right: 1.5vw;
+    bottom: 1.5vh;
+    display: flex;
+    gap: 1vw;
+    opacity: 0.22;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+}
+
+.ts-kiosk:hover {
+    opacity: 0.85;
+}
+
+.ts-kiosk-btn {
+    width: min(12vw, 8vh);
+    height: min(12vw, 8vh);
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    max-width: 3.5rem;
+    max-height: 3.5rem;
+    padding: 0;
+    border: max(0.1vw, 1px) solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.4vw;
+    background: rgba(20, 24, 32, 0.9);
+    color: #c5cad3;
+    font-size: clamp(2.5vw, 1.5vh, 3.5vw);
+    line-height: 1;
+    cursor: pointer;
+}
+
+.ts-kiosk-btn:active {
+    background: rgba(40, 48, 64, 0.95);
+}
+
+@media (min-width: 48rem) {
+    .ts-kiosk {
+        right: 2vw;
+        bottom: 2vh;
+    }
+}

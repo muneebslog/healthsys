@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,5 +44,18 @@ class InvoiceService extends Model
     public function ledgerItems(): HasMany
     {
         return $this->hasMany(DoctorShareLedgerItem::class);
+    }
+
+    /**
+     * Invoice lines where the doctor’s share is still owed (not yet logged as paid out).
+     */
+    public function scopeUnpaidDoctorShare(Builder $query): Builder
+    {
+        $t = $query->getModel()->getTable();
+
+        return $query
+            ->where($t.'.doctor_share_paid', false)
+            ->where($t.'.doctor_share_amount', '>', 0)
+            ->whereNotNull($t.'.doctor_id');
     }
 }

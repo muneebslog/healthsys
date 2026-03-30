@@ -153,13 +153,18 @@ HMS is a clinic/hospital management system designed to handle patient registrati
 ## 8. Appointments Page
 
 ### Calendar View
-- Grid view (slots × doctors or slots × time).
+- **Today only** — no date picker. Appointments always use today's date since queues are created for the current day only. Future booking is out of scope for now.
+- Grid view: rows = 5-minute time slots, columns = doctors.
+- Slots shown only within each doctor's `start_time` → `end_time` (stored on doctors table). If doctor has no schedule set, no slots shown.
+- **5-minute slot intervals** — fine-grained enough to match token flow.
 - Color coding:
-  - 🟢 Green = Available
-  - 🔴/Pink = Booked (patient name + time shown)
-  - ⚫ Grey = Used by Walk-In (slot taken via walk-in, not bookable)
-- Filters: Date picker, Doctor dropdown.
-- Actions: Book → Arrived, Mark as arrived → triggers invoice flow.
+  - 🟢 Green = Available (`Book` button)
+  - 🔴/Pink = Booked (show: T-{number}, patient name, booked time, `Mark Arrived` button)
+  - 🟢 Emerald = Arrived / Invoiced (show: T-{number}, patient name, `Arrived ✓`)
+  - ⚫ Grey = Used by Walk-In (walk-in token with no appointment, matched by created_at to slot)
+- **Token number must be visible on every non-empty cell** — it's the primary identifier patients use.
+- Filter: Doctor dropdown only (no date picker).
+- Actions: Book slot → creates reserved QueueToken + Appointment + sends SMS. Mark Arrived → reserved → waiting, creates visit + invoice, opens print tab.
 
 ### Broadcast Message
 - Staff can send a **message to all appointment holders** for a given day (e.g., doctor delay notice).
@@ -168,14 +173,247 @@ HMS is a clinic/hospital management system designed to handle patient registrati
 
 ## 9. Token Screen (Display)
 
-- Separate screen/page for the waiting area display.
-- Shows: Doctor Name, Current Token Being Served (large, readable).
-- Navigation: previous / next token arrows (for staff to control flow).
-- Shows: Remaining Tokens, Next Token, Arrived in Queue count.
+### Hardware
+- Displayed on an **old Android TV** in the waiting area opening a browser in fullscreen.
+- Use **polling every 4 seconds** (`/api/token-screen/data`) — do NOT use WebSockets, old Android TV browsers may not handle it reliably.
+- `/token-screen` is a **public route** (no auth required). Optionally accept a `?queue_id=` param to filter by specific queue.
+
+### Queue Selection Screen
+On load, `/token-screen` first shows a **queue picker** — all currently active queues listed as big tappable cards:
+```
+┌──────────────────┐  ┌──────────────────┐
+│  Dr. Ayasha      │  │  Dr. Mehdi        │
+│  Consultation    │  │  Consultation     │
+│                  │  │                   │
+│   Tap to display │  │   Tap to display  │
+└──────────────────┘  └──────────────────┘
+```
+Staff/admin opens the TV browser, picks the queue → full screen display starts.
+Selected `queue_id` stored in the URL (`/token-screen?queue_id=3`) so the TV remembers it on refresh.
+
+### What It Shows (after queue selected)
+- **Current token being served** — massive text, dead center
+- **Doctor name + Service name** — top of screen
+- **Remaining count** — how many are currently `waiting` (arrived)
+- ❌ No "Next token" shown — next token can change any moment as more patients arrive, showing it would mislead patients
+
+### Layout
+```
+┌─────────────────────────────────┐
+│   Dr. Ayasha Malik              │
+│   Consultation                  │
+│                                 │
+│   NOW SERVING                   │
+│                                 │
+│        T - 4 8      (huge font) │
+│                                 │
+│       Waiting: 12               │
+└─────────────────────────────────┘
+```
+Dark background, high contrast, readable from across the room.
+
+### Three Separate Pages
+
+| Page | Who | Purpose |
+|---|---|---|
+| `/token-screen?queue_id=X` | Android TV | Display only, auto-polls every 4s |
+| `/queues` | Staff | List all active queues, pick one to control |
+| `/queues/control/{queue_id}` | Staff (phone/tablet/PC) | Remote control — call next, skip, back, re-queue |
+
+### Token Screen — Inline Buttons (accessible screens)
+For screens that staff can physically reach (mouse/touch available), show small unobtrusive `←` `→` buttons in the corner of the token screen itself. Same API calls as the remote control page. They should not distract patients — small, low opacity, tucked in bottom corner.
+
+### Remote Control Page — `/queues/control/{queue_id}`
+For screens mounted high or in hallways where no staff is nearby. Staff opens this on their **phone** (must be logged in). Built as a **Livewire component** — real-time updates without JS, supports latest browser tech on staff phones.
+
+#### Livewire Component: `QueueControl`
+```
+app/Livewire/QueueControl.php
+resources/views/livewire/queue-control.blade.php
+```
+
+#### Layout — Two Sections (scrollable mobile page)
+
+**Section 1 — Control Panel (top, always visible)**
+```
+┌─────────────────────┐
+│  Dr. Ayasha Malik   │
+│  Consultation       │
+│                     │
+│  Now Serving: T-48  │
+│  Waiting: 5         │
+│  Skipped: 2         │
+│  Done: 12           │
+│                     │
+│  ┌───────────────┐  │
+│  │  CALL NEXT ▶  │  │  ← big, green, primary
+│  └───────────────┘  │
+│                     │
+│  ┌──────┐ ┌──────┐  │
+│  │◀ BACK│ │ SKIP │  │  ← smaller, secondary
+│  └──────┘ └──────┘  │
+└─────────────────────┘
+```
+
+**Section 2 — Patient List (below, tabbed)**
+
+Three tabs:
+- **Waiting** — arrived patients in queue order (token_number ASC). Shows who's next.
+- **All** — every token issued for this queue today (reserved + waiting + serving + done + skipped)
+- **Skipped** — skipped patients only, each with a `Re-queue` button
+
+Each row shows:
+```
+T-48  │ John Doe        │ 2:36 PM  │ [Re-queue]  ← skipped tab
+T-52  │ Amna Bibi       │ 3:01 PM  │             ← waiting tab (in order)
+T-55  │ Ahmed Khan      │ --       │             ← reserved (not arrived yet)
+```
+
+Columns: Token # | Patient Name | Arrived At | Action (if applicable)
+
+#### Livewire Properties & Methods
+```php
+class QueueControl extends Component
+{
+    public Queue $queue;
+    public string $activeTab = 'waiting'; // waiting | all | skipped
+
+    // Polling — refresh every 4 seconds to catch walk-ins arriving
+    #[Poll(4000)]
+
+    public function callNext(): void { ... }   // call lowest waiting token
+    public function skip(): void { ... }        // skip current serving → skipped
+    public function previous(): void { ... }    // 1-step undo
+    public function requeue(int $tokenId): void { ... } // skipped → waiting
+
+    public function getWaitingTokensProperty() {
+        // status=waiting, orderBy token_number ASC
+    }
+    public function getAllTokensProperty() {
+        // all statuses, orderBy token_number ASC
+    }
+    public function getSkippedTokensProperty() {
+        // status=skipped
+    }
+}
+```
+
+#### Notes
+- Requires `auth` middleware — staff must be logged in
+- `#[Poll(4000)]` keeps the list live as walk-ins arrive and get added to queue
+- `callNext`, `skip`, `previous` update `queue.current_flow_token` which the TV picks up via its own polling
+- Mobile-first styling, large tap targets for buttons, compact rows for the patient list
+
+### API Endpoints for Queue Control
+```
+GET  /queues                           → list all active queues
+GET  /queues/control/{queue_id}        → remote control page
+
+POST /api/queues/{queue_id}/call-next  → mark current serving as done, call lowest waiting token
+POST /api/queues/{queue_id}/skip       → mark current serving as skipped, call next waiting
+POST /api/queues/{queue_id}/previous   → undo last call (1 step only — oops correction)
+                                          flip last done → serving, current serving → waiting
+POST /api/tokens/{token_id}/requeue    → flip skipped → waiting (patient came back)
+```
+
+### Back Button Logic (1-step undo only)
+```php
+// Find last completed token
+$last = QueueToken::where('queue_id', $queueId)
+    ->where('status', 'done')
+    ->orderBy('completed_at', 'desc')
+    ->first();
+
+if ($last) {
+    // Push current serving back to waiting
+    QueueToken::where('queue_id', $queueId)
+        ->where('status', 'serving')
+        ->update(['status' => 'waiting', 'called_at' => null]);
+
+    // Restore last done to serving
+    $last->update(['status' => 'serving', 'completed_at' => null]);
+    $queue->update(['current_flow_token' => $last->token_number]);
+}
+// No infinite undo — only 1 step back allowed
+```
 
 ---
 
-## 10. Database Schema Summary
+## 10. Queue Calling Algorithm — Dynamic Re-ordering
+
+Token numbers are **identity numbers, not position numbers**. The queue reorders dynamically based on who has physically arrived.
+
+### Rule
+When staff calls next token → do NOT blindly increment to next issued number.
+Instead:
+1. Query all `queue_tokens` where `status = waiting` for this queue
+2. Order by `token_number ASC`
+3. Call the **lowest token number among arrived patients**
+4. If nobody is `waiting` → hold, don't change `current_flow_token`
+
+### Example
+```
+Tokens issued:   3, 4, 5, 6, 7
+Arrived so far:  6
+→ Call 6
+
+Now 4 arrives (status flips to waiting)
+→ Next call = 4  (not 7, even though 7 was next by issue order)
+
+Now 5 arrives
+→ Next call = 5
+```
+
+### QueueToken Status Flow
+```
+reserved  →  waiting   (patient arrives / walk-in registered)
+waiting   →  serving   (staff calls them via Token Control)
+serving   →  done      (consultation complete)
+serving   →  skipped   (staff skips, moves to next)
+```
+
+### Call Next Logic (PHP)
+```php
+// 1. Mark current serving token as done
+QueueToken::where('queue_id', $queueId)
+    ->where('status', 'serving')
+    ->update(['status' => 'done', 'completed_at' => now()]);
+
+// 2. Get next arrived patient (lowest token number)
+$next = QueueToken::where('queue_id', $queueId)
+    ->where('status', 'waiting')
+    ->orderBy('token_number', 'asc')
+    ->first();
+
+if ($next) {
+    $next->update(['status' => 'serving', 'called_at' => now()]);
+    $queue->update(['current_flow_token' => $next->token_number]);
+}
+```
+
+### API for Token Screen
+```
+GET /api/token-screen/data?queue_id=3
+Returns JSON: {
+    queue_id,
+    doctor_name,
+    service_name,
+    current_flow_token,   // token currently being served
+    remaining_count       // count of status=waiting tokens
+    // NO next_token — intentionally excluded, it changes dynamically as patients arrive
+}
+
+GET /api/token-screen/queues
+Returns all active queues for the picker screen:
+[
+  { queue_id, doctor_name, service_name, remaining_count },
+  ...
+]
+```
+
+---
+
+## 11. Database Schema Summary
 
 ### Core Tables
 
@@ -183,7 +421,8 @@ HMS is a clinic/hospital management system designed to handle patient registrati
 
 **Families** — `id, phone, head_id`
 
-**Doctors** — `id, name, specialization, phone, status, is_on_payroll, user_id (nullable FK → users)`
+**Doctors** — `id, name, specialization, phone, start_time, end_time, status, is_on_payroll, user_id (nullable FK → users)`
+> `start_time` and `end_time` are `TIME` columns (e.g. `09:00`, `17:00`). Used to generate appointment slots on the calendar — only slots within this range are shown. If null, doctor has no bookable slots.
 > `user_id` is nullable — a doctor profile can exist without a login. Admin links a user account to a doctor and sets that user's role to `doctor`. The link is owned by the `doctors` table. One-to-one enforced via unique constraint on `user_id`.
 
 **Services** — `id, name, is_standalone (bool), reset_type (enum: per_shift|daily), is_active (bool)`
@@ -214,7 +453,7 @@ HMS is a clinic/hospital management system designed to handle patient registrati
 
 ---
 
-## 11. Key Business Rules
+## 12. Key Business Rules
 
 1. **One open shift at a time** — enforce at DB and app level.
 2. **Phone number = family identity** — never reassign or reset.
@@ -229,14 +468,14 @@ HMS is a clinic/hospital management system designed to handle patient registrati
 
 ---
 
-## 12. SMS Notifications
+## 13. SMS Notifications
 
 - Sent on: appointment booking confirmation (includes token number + time).
 - May also be used for: doctor delay broadcast to all appointment holders for the day.
 
 ---
 
-## 13. Out of Scope (for now)
+## 14. Out of Scope (for now)
 - Online patient portal / self-booking web form
 - Lab / pharmacy module
 - Insurance / claim management
