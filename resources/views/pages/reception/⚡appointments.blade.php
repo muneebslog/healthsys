@@ -508,7 +508,34 @@ new #[Title('Appointments')] class extends Component
                 }
 
                 $queue = $this->findOrCreateActiveQueue($service->id, $this->bookDoctorId, $shift->id);
-                $tokenNumber = $queue->assignNextToken();
+
+                // Appointment reservations must reserve the exact token matching the grid slot:
+                // slot #n ↔ token T-n (so booking slot 50 produces token 50).
+                $doctor = Doctor::query()->find($this->bookDoctorId);
+                if (! $doctor) {
+                    throw new \RuntimeException('doctor_missing');
+                }
+
+                $slotTimes = $this->slotTimesForDoctorModel($doctor);
+                $normalizedSlot = $this->normalizeSlotTime($this->bookSlotTime);
+                $idx = array_search($normalizedSlot, $slotTimes, true);
+                if ($idx === false) {
+                    throw new \RuntimeException('slot_invalid');
+                }
+
+                $tokenNumber = $idx + 1;
+
+                // Prevent collisions with any existing queue token number.
+                // (This also protects against stale Livewire caches / concurrency.)
+                $queue = Queue::query()->lockForUpdate()->findOrFail($queue->id);
+                $tokenAlreadyExists = QueueToken::query()
+                    ->where('queue_id', $queue->id)
+                    ->where('token_number', $tokenNumber)
+                    ->exists();
+
+                if ($tokenAlreadyExists) {
+                    throw new \RuntimeException('slot_taken');
+                }
 
                 $token = QueueToken::query()->create([
                     'queue_id' => $queue->id,

@@ -64,10 +64,21 @@ class Queue extends Model
     {
         return (int) DB::transaction(function () {
             $queue = static::lockForUpdate()->findOrFail($this->id);
-            $queue->current_token += 1;
+
+            // Walk-ins must not collide with already reserved tokens (from appointment slots).
+            // We scan forward from the next counter value and pick the first unused token_number.
+            $candidate = (int) $queue->current_token + 1;
+            while (QueueToken::query()
+                ->where('queue_id', $queue->id)
+                ->where('token_number', $candidate)
+                ->exists()) {
+                $candidate++;
+            }
+
+            $queue->current_token = $candidate;
             $queue->save();
 
-            return $queue->current_token;
+            return $candidate;
         });
     }
 }

@@ -31,6 +31,9 @@
                         <flux:sidebar.item icon="currency-dollar" :href="route('reception.doctor-share-out')" :current="request()->routeIs('reception.doctor-share-out')" wire:navigate>
                             {{ __('Doc share out') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="currency-dollar" :href="route('invoices.index')" :current="request()->routeIs('invoices.index')" wire:navigate>
+                            {{ __('Invoices') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="numbered-list" :href="route('queues.index')" :current="request()->routeIs('queues.index') || request()->routeIs('queues.control')" wire:navigate>
                             {{ __('Queues') }}
                         </flux:sidebar.item>
@@ -41,6 +44,9 @@
                     <flux:sidebar.group :heading="__('Owner')" class="grid">
                         <flux:sidebar.item icon="chart-bar" :href="route('owner.shifts')" :current="request()->routeIs('owner.shifts') || request()->routeIs('owner.shifts.show')" wire:navigate>
                             {{ __('Shifts') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="currency-dollar" :href="route('invoices.index')" :current="request()->routeIs('invoices.index')" wire:navigate>
+                            {{ __('Invoices') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif

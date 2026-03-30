@@ -23,6 +23,7 @@ Route::middleware(['web', 'token.screen.control', 'throttle:120,1'])
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
+    Route::livewire('invoices', 'pages::invoices.invoices')->name('invoices.index');
     Route::get('invoices/{invoice}/print', InvoicePrintController::class)->name('invoices.print');
 });
 
