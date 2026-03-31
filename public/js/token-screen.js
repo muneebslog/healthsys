@@ -65,6 +65,7 @@
         info.push('screen: ' + (screen ? (screen.width + 'x' + screen.height) : ''));
         info.push('inner: ' + (window.innerWidth + 'x' + window.innerHeight));
         info.push('devicePixelRatio: ' + (window.devicePixelRatio || 1));
+        info.push('fullscreen: ' + (isFullscreen() ? 'yes' : 'no'));
         info.push('token font-size: ' + (elToken ? getComputedPx(elToken, 'font-size') : ''));
         info.push('token line-height: ' + (elToken ? getComputedPx(elToken, 'line-height') : ''));
         info.push('meta viewport: ' + (document.querySelector('meta[name="viewport"]') ? (document.querySelector('meta[name="viewport"]').getAttribute('content') || '') : ''));
@@ -264,9 +265,25 @@
     }
 
     function wireKiosk() {
+        var fs = document.getElementById('ts-btn-fullscreen');
         var prev = document.getElementById('ts-btn-prev');
         var skip = document.getElementById('ts-btn-skip');
         var next = document.getElementById('ts-btn-next');
+        if (fs) {
+            var canFullscreen = !!(
+                document.fullscreenEnabled ||
+                document.webkitFullscreenEnabled ||
+                document.mozFullScreenEnabled ||
+                document.msFullscreenEnabled
+            );
+            if (!canFullscreen) {
+                fs.setAttribute('hidden', 'hidden');
+            } else {
+                fs.onclick = function () {
+                    toggleFullscreen(fs);
+                };
+            }
+        }
         if (prev) {
             prev.onclick = function () {
                 queueAction(cfg.urls.previous);
@@ -284,6 +301,64 @@
         }
     }
 
+    function isFullscreen() {
+        return !!(
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
+            document.msFullscreenElement
+        );
+    }
+
+    function requestFullscreen(el) {
+        var fn =
+            el.requestFullscreen ||
+            el.webkitRequestFullscreen ||
+            el.mozRequestFullScreen ||
+            el.msRequestFullscreen;
+        if (fn) {
+            fn.call(el);
+        }
+    }
+
+    function exitFullscreen() {
+        var fn =
+            document.exitFullscreen ||
+            document.webkitExitFullscreen ||
+            document.mozCancelFullScreen ||
+            document.msExitFullscreen;
+        if (fn) {
+            fn.call(document);
+        }
+    }
+
+    function updateFullscreenBtn(btn) {
+        if (!btn) {
+            return;
+        }
+        if (isFullscreen()) {
+            btn.title = 'Exit full screen';
+            btn.setAttribute('aria-label', 'Exit full screen');
+            btn.textContent = '⤫';
+        } else {
+            btn.title = 'Full screen';
+            btn.setAttribute('aria-label', 'Enter full screen');
+            btn.textContent = '⛶';
+        }
+    }
+
+    function toggleFullscreen(btn) {
+        if (isFullscreen()) {
+            exitFullscreen();
+        } else {
+            requestFullscreen(document.documentElement);
+        }
+        window.setTimeout(function () {
+            updateFullscreenBtn(btn);
+            renderDebug();
+        }, 50);
+    }
+
     function init() {
         wireKiosk();
         elDisplay.setAttribute('hidden', 'hidden');
@@ -292,6 +367,15 @@
         loadQueues();
         renderDebug();
         window.addEventListener('resize', renderDebug);
+
+        var fsBtn = document.getElementById('ts-btn-fullscreen');
+        if (fsBtn) {
+            updateFullscreenBtn(fsBtn);
+            document.addEventListener('fullscreenchange', function () { updateFullscreenBtn(fsBtn); renderDebug(); });
+            document.addEventListener('webkitfullscreenchange', function () { updateFullscreenBtn(fsBtn); renderDebug(); });
+            document.addEventListener('mozfullscreenchange', function () { updateFullscreenBtn(fsBtn); renderDebug(); });
+            document.addEventListener('MSFullscreenChange', function () { updateFullscreenBtn(fsBtn); renderDebug(); });
+        }
     }
 
     if (document.readyState === 'loading') {
