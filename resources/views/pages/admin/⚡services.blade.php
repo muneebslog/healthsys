@@ -24,6 +24,8 @@ new #[Title('Services')] class extends Component
 
     public bool $is_active = true;
 
+    public bool $allow_walkin_without_phone = false;
+
     public ?int $pendingDeleteId = null;
 
     public bool $showDeleteModal = false;
@@ -48,6 +50,7 @@ new #[Title('Services')] class extends Component
         $this->is_standalone = false;
         $this->reset_type = QueueResetType::Daily->value;
         $this->is_active = true;
+        $this->allow_walkin_without_phone = false;
         $this->resetErrorBag();
         $this->showModal = true;
     }
@@ -60,6 +63,7 @@ new #[Title('Services')] class extends Component
         $this->is_standalone = $s->is_standalone;
         $this->reset_type = $s->reset_type->value;
         $this->is_active = $s->is_active;
+        $this->allow_walkin_without_phone = (bool) $s->allow_walkin_without_phone;
         $this->resetErrorBag();
         $this->showModal = true;
     }
@@ -71,6 +75,7 @@ new #[Title('Services')] class extends Component
             'is_standalone' => ['boolean'],
             'reset_type' => ['required', 'in:per_shift,daily'],
             'is_active' => ['boolean'],
+            'allow_walkin_without_phone' => ['boolean'],
         ], [], [
             'name' => __('name'),
         ]);
@@ -80,6 +85,7 @@ new #[Title('Services')] class extends Component
             'is_standalone' => $validated['is_standalone'],
             'reset_type' => $validated['reset_type'],
             'is_active' => $validated['is_active'],
+            'allow_walkin_without_phone' => $validated['allow_walkin_without_phone'],
         ];
 
         if ($this->editingId) {
@@ -243,6 +249,15 @@ new #[Title('Services')] class extends Component
                 <div class="flex items-center justify-between gap-4">
                     <flux:label>{{ __('Active') }}</flux:label>
                     <flux:switch wire:model="is_active" />
+                </div>
+            </flux:field>
+            <flux:field>
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <flux:label>{{ __('Allow walk-in without phone') }}</flux:label>
+                        <flux:text class="text-sm text-zinc-500">{{ __('If enabled, reception can create a quick walk-in using only a name for this service.') }}</flux:text>
+                    </div>
+                    <flux:switch wire:model="allow_walkin_without_phone" />
                 </div>
             </flux:field>
             <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

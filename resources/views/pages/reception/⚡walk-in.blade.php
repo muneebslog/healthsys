@@ -32,6 +32,10 @@ new #[Title('Walk-in')] class extends Component
 
     public string $phoneQuery = '';
 
+    public bool $quickMode = false;
+
+    public string $quickName = '';
+
     /** Bumped on clear so the phone input remounts and cannot keep stale DOM text. */
     public int $phoneFieldVersion = 0;
 
@@ -92,8 +96,14 @@ new #[Title('Walk-in')] class extends Component
     #[Computed]
     public function services()
     {
-        return Service::query()
-            ->where('is_active', true)
+        $query = Service::query()
+            ->where('is_active', true);
+
+        if ($this->quickMode) {
+            $query->where('allow_walkin_without_phone', true);
+        }
+
+        return $query
             ->orderBy('name')
             ->get();
     }
@@ -139,6 +149,10 @@ new #[Title('Walk-in')] class extends Component
 
     public function lookupPhone(): void
     {
+        if ($this->quickMode) {
+            return;
+        }
+
         $this->validate($this->phoneQueryRules(), [], [
             'phoneQuery' => __('phone'),
         ]);
@@ -161,8 +175,58 @@ new #[Title('Walk-in')] class extends Component
         $this->familyId = null;
         $this->selectedPatientId = null;
         $this->phoneQuery = '';
+        $this->quickName = '';
         $this->phoneFieldVersion++;
         $this->resetLineItemsQuiet();
+        $this->resetErrorBag();
+    }
+
+    public function switchToQuickMode(): void
+    {
+        $this->quickMode = true;
+        $this->clearFamily();
+    }
+
+    public function switchToPhoneMode(): void
+    {
+        $this->quickMode = false;
+        $this->clearFamily();
+    }
+
+    public function createQuickWalkIn(): void
+    {
+        if (! $this->activeShift) {
+            $this->addError('quickName', __('Open a shift before registering walk-ins.'));
+
+            return;
+        }
+
+        $validated = $this->validate([
+            'quickName' => ['required', 'string', 'max:255'],
+        ], [], [
+            'quickName' => __('name'),
+        ]);
+
+        $family = DB::transaction(function () use ($validated) {
+            $family = Family::query()->create(['phone' => null]);
+
+            $head = Patient::query()->create([
+                'family_id' => $family->id,
+                'name' => $validated['quickName'],
+                'gender' => 'other',
+                'type' => PatientType::Head,
+                'relation_to_head' => null,
+            ]);
+
+            $family->update(['head_id' => $head->id]);
+
+            return $family;
+        });
+
+        $this->familyId = $family->id;
+        $this->selectedPatientId = $family->head_id;
+        $this->resetLineItemsQuiet();
+        unset($this->family);
         $this->resetErrorBag();
     }
 
@@ -631,35 +695,66 @@ new #[Title('Walk-in')] class extends Component
 
     <div class="grid gap-8 lg:grid-cols-2">
         <flux:card class="space-y-6 p-6 sm:p-8">
-            <flux:heading size="lg">{{ __('1. Phone & patient') }}</flux:heading>
-            <form wire:submit="lookupPhone" class="flex flex-col gap-4 sm:flex-row sm:items-end">
-                @php($phoneDigitCount = strlen(preg_replace('/\D/', '', $phoneQuery)))
-                <flux:field
-                    class="min-w-0 flex-1"
-                    :description:trailing="__(':current / :need digits', ['current' => $phoneDigitCount, 'need' => 11])"
-                >
-                    <flux:label>{{ __('Family phone') }}</flux:label>
-                    <flux:input
-                        wire:key="walkin-phone-{{ $phoneFieldVersion }}"
-                        wire:model.live="phoneQuery"
-                        type="tel"
-                        inputmode="numeric"
-                        autocomplete="tel"
-                        placeholder="03001234567"
-                        icon="device-phone-mobile"
-                        :invalid="$phoneDigitCount > 0 && $phoneDigitCount !== 11"
-                    />
-                    <flux:error name="phoneQuery" />
-                </flux:field>
-                <flux:button type="submit" variant="primary" icon="magnifying-glass" :disabled="! $this->activeShift" wire:loading.attr="disabled">
-                    {{ __('Search') }}
-                </flux:button>
-            </form>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <flux:heading size="lg">{{ __('1. Patient') }}</flux:heading>
+                <flux:button.group>
+                    <flux:button size="sm" :variant="$quickMode ? 'primary' : 'outline'" type="button" wire:click="switchToQuickMode">
+                        {{ __('Quick test (no phone)') }}
+                    </flux:button>
+                    <flux:button size="sm" :variant="$quickMode ? 'outline' : 'primary'" type="button" wire:click="switchToPhoneMode">
+                        {{ __('Phone lookup') }}
+                    </flux:button>
+                </flux:button.group>
+            </div>
+
+            @if ($quickMode)
+                <form wire:submit="createQuickWalkIn" class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                    <flux:field class="min-w-0 flex-1">
+                        <flux:label>{{ __('Name') }}</flux:label>
+                        <flux:input wire:model.live="quickName" autocomplete="off" placeholder="{{ __('e.g. Ahmed, Ammi, Uncle') }}" icon="user" />
+                        <flux:error name="quickName" />
+                    </flux:field>
+                    <flux:button type="submit" variant="primary" icon="check" :disabled="! $this->activeShift" wire:loading.attr="disabled">
+                        {{ __('Start') }}
+                    </flux:button>
+                </form>
+            @else
+                <form wire:submit="lookupPhone" class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                    @php($phoneDigitCount = strlen(preg_replace('/\D/', '', $phoneQuery)))
+                    <flux:field
+                        class="min-w-0 flex-1"
+                        :description:trailing="__(':current / :need digits', ['current' => $phoneDigitCount, 'need' => 11])"
+                    >
+                        <flux:label>{{ __('Family phone') }}</flux:label>
+                        <flux:input
+                            wire:key="walkin-phone-{{ $phoneFieldVersion }}"
+                            wire:model.live="phoneQuery"
+                            type="tel"
+                            inputmode="numeric"
+                            autocomplete="tel"
+                            placeholder="03001234567"
+                            icon="device-phone-mobile"
+                            :invalid="$phoneDigitCount > 0 && $phoneDigitCount !== 11"
+                        />
+                        <flux:error name="phoneQuery" />
+                    </flux:field>
+                    <flux:button type="submit" variant="primary" icon="magnifying-glass" :disabled="! $this->activeShift" wire:loading.attr="disabled">
+                        {{ __('Search') }}
+                    </flux:button>
+                </form>
+            @endif
 
             @if ($this->family)
                 <div class="space-y-3">
                     <div class="flex items-center justify-between gap-2">
-                        <flux:text class="text-sm text-zinc-500">{{ __('Family') }} · {{ $this->family->phone }}</flux:text>
+                        <flux:text class="text-sm text-zinc-500">
+                            {{ __('Family') }}
+                            @if ($this->family->phone)
+                                · {{ $this->family->phone }}
+                            @else
+                                · {{ __('No phone') }}
+                            @endif
+                        </flux:text>
                         <flux:button size="sm" variant="ghost" wire:click="clearFamily">{{ __('Clear') }}</flux:button>
                     </div>
                     <div class="grid gap-2 sm:grid-cols-2">
@@ -820,9 +915,10 @@ new #[Title('Walk-in')] class extends Component
     <flux:modal wire:model="showEditLinePriceModal" name="edit-line-price" class="max-w-md">
         <form wire:submit="saveLinePrice" class="space-y-4">
             <flux:heading size="lg">{{ __('Edit line price') }}</flux:heading>
-            @if ($editingLineIndex !== null && isset($lineItems[$editingLineIndex]))
+            @php($editIdx = is_int($editingLineIndex) ? $editingLineIndex : null)
+            @if ($editIdx !== null && array_key_exists($editIdx, $lineItems))
                 <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
-                    {{ $lineItems[$editingLineIndex]['label'] }}
+                    {{ $lineItems[$editIdx]['label'] ?? '' }}
                 </flux:text>
             @endif
             <flux:field>

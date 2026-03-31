@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Service extends Model
 {
-    protected $fillable = ['name', 'is_standalone', 'reset_type', 'is_active'];
+    protected $fillable = ['name', 'is_standalone', 'reset_type', 'is_active', 'allow_walkin_without_phone'];
 
     protected function casts(): array
     {
@@ -17,6 +17,7 @@ class Service extends Model
             'is_standalone' => 'boolean',
             'reset_type' => QueueResetType::class,
             'is_active' => 'boolean',
+            'allow_walkin_without_phone' => 'boolean',
         ];
     }
 
