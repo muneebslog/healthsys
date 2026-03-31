@@ -7,4 +7,5 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::livewire('doctors', 'pages::admin.doctors')->name('doctors');
     Route::livewire('service-prices', 'pages::admin.service-prices')->name('service-prices');
     Route::livewire('users', 'pages::admin.users')->name('users');
+    Route::livewire('settings', 'pages::admin.settings')->name('settings');
 });

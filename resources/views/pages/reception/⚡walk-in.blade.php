@@ -545,26 +545,7 @@ new #[Title('Walk-in')] class extends Component
 
     protected function findOrCreateActiveQueue(int $serviceId, ?int $doctorId, int $shiftId): Queue
     {
-        $existing = Queue::query()
-            ->where('service_id', $serviceId)
-            ->where('doctor_id', $doctorId)
-            ->where('shift_id', $shiftId)
-            ->whereNull('closed_at')
-            ->where('status', QueueStatus::Active)
-            ->first();
-
-        if ($existing) {
-            return $existing;
-        }
-
-        return Queue::query()->create([
-            'service_id' => $serviceId,
-            'doctor_id' => $doctorId,
-            'shift_id' => $shiftId,
-            'status' => QueueStatus::Active,
-            'current_token' => 0,
-            'current_flow_token' => 0,
-        ]);
+        return Queue::findOrCreateActiveForShift($serviceId, $doctorId, $shiftId);
     }
 
     /**

@@ -30,6 +30,8 @@ html {
     color: #e8eaed;
     font-family: Georgia, "Times New Roman", Times, serif;
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     overflow-x: hidden;
     overflow-y: auto;
 }
@@ -207,7 +209,8 @@ html {
 .ts-token {
     margin: 0;
     font-family: Impact, Haettenschweiler, "Arial Narrow Bold", "Franklin Gothic Bold", sans-serif;
-    font-size: min(32vw, 42vh);
+    /* Bigger by default for "sit back" viewing (Android TV / kiosk). */
+    font-size: min(40vw, 52vh);
     line-height: 1;
     font-weight: 400;
     color: #ffb020;
@@ -216,6 +219,32 @@ html {
     flex-shrink: 0;
     max-width: 96vw;
     word-break: break-all;
+}
+
+/* TV / desktop viewports: push token even larger */
+@media (min-width: 64rem) and (min-height: 36rem) {
+    .ts-token {
+        font-size: min(44vw, 58vh);
+    }
+}
+
+/* Debug overlay (enabled via ?debug=1) */
+.ts-debug {
+    position: fixed;
+    left: 1.2vw;
+    top: 1.2vh;
+    z-index: 999;
+    max-width: 96vw;
+    padding: 1vh 1vw;
+    border-radius: 0.4vw;
+    border: max(0.1vw, 1px) solid rgba(255, 255, 255, 0.18);
+    background: rgba(0, 0, 0, 0.55);
+    color: #e8eaed;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: clamp(1.8vw, 1.2vh + 0.4vw, 2.4vw);
+    line-height: 1.25;
+    white-space: pre-wrap;
+    pointer-events: none;
 }
 
 .ts-waiting {

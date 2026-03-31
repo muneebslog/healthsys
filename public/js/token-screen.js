@@ -23,6 +23,54 @@
     var elWaiting = document.getElementById('ts-waiting-count');
     var elDisplayError = document.getElementById('ts-display-error');
     var elKiosk = document.getElementById('ts-kiosk');
+    var elDebug = document.getElementById('ts-debug');
+
+    function getQueryParam(name) {
+        var q = window.location.search || '';
+        if (!q) {
+            return null;
+        }
+        var parts = q.replace(/^\?/, '').split('&');
+        for (var i = 0; i < parts.length; i++) {
+            var kv = parts[i].split('=');
+            if (decodeURIComponent(kv[0] || '') === name) {
+                return decodeURIComponent(kv[1] || '');
+            }
+        }
+        return null;
+    }
+
+    function getComputedPx(el, prop) {
+        try {
+            var cs = window.getComputedStyle(el);
+            return cs && cs.getPropertyValue(prop) ? String(cs.getPropertyValue(prop)).trim() : '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function renderDebug() {
+        if (!elDebug) {
+            return;
+        }
+        var enabled = getQueryParam('debug') === '1';
+        if (!enabled) {
+            elDebug.setAttribute('hidden', 'hidden');
+            return;
+        }
+        var info = [];
+        info.push('TokenScreen debug=1');
+        info.push('UA: ' + (navigator.userAgent || ''));
+        info.push('platform: ' + (navigator.platform || '') + ' | vendor: ' + (navigator.vendor || ''));
+        info.push('screen: ' + (screen ? (screen.width + 'x' + screen.height) : ''));
+        info.push('inner: ' + (window.innerWidth + 'x' + window.innerHeight));
+        info.push('devicePixelRatio: ' + (window.devicePixelRatio || 1));
+        info.push('token font-size: ' + (elToken ? getComputedPx(elToken, 'font-size') : ''));
+        info.push('token line-height: ' + (elToken ? getComputedPx(elToken, 'line-height') : ''));
+        info.push('meta viewport: ' + (document.querySelector('meta[name="viewport"]') ? (document.querySelector('meta[name="viewport"]').getAttribute('content') || '') : ''));
+        elDebug.textContent = info.join('\n');
+        elDebug.removeAttribute('hidden');
+    }
 
     function getCsrfToken() {
         var meta = document.querySelector('meta[name="csrf-token"]');
@@ -242,6 +290,8 @@
         elKiosk.setAttribute('hidden', 'hidden');
         elPicker.removeAttribute('hidden');
         loadQueues();
+        renderDebug();
+        window.addEventListener('resize', renderDebug);
     }
 
     if (document.readyState === 'loading') {

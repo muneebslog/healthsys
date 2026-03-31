@@ -60,6 +60,51 @@ class Queue extends Model
             ->where('status', '!=', QueueStatus::Finished);
     }
 
+    public static function findOrCreateActiveForShift(int $serviceId, ?int $doctorId, int $shiftId): self
+    {
+        return DB::transaction(function () use ($serviceId, $doctorId, $shiftId): self {
+            $matching = static::query()
+                ->where('service_id', $serviceId)
+                ->where('doctor_id', $doctorId)
+                ->where('shift_id', $shiftId)
+                ->whereNull('closed_at')
+                ->where('status', QueueStatus::Active)
+                ->lockForUpdate()
+                ->orderBy('id')
+                ->get();
+
+            if ($matching->isNotEmpty()) {
+                // If a race previously created duplicates, deterministically pick the oldest one.
+                // We only auto-close empty duplicates so we don't strand tokens.
+                $primary = $matching->first();
+
+                foreach ($matching->skip(1) as $dupe) {
+                    $hasTokens = QueueToken::query()
+                        ->where('queue_id', $dupe->id)
+                        ->exists();
+
+                    if (! $hasTokens) {
+                        $dupe->forceFill([
+                            'status' => QueueStatus::Closed,
+                            'closed_at' => now(),
+                        ])->save();
+                    }
+                }
+
+                return $primary;
+            }
+
+            return static::query()->create([
+                'service_id' => $serviceId,
+                'doctor_id' => $doctorId,
+                'shift_id' => $shiftId,
+                'status' => QueueStatus::Active,
+                'current_token' => 0,
+                'current_flow_token' => 0,
+            ]);
+        });
+    }
+
     public function assignNextToken(): int
     {
         return (int) DB::transaction(function () {

@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#07090c">
     <title>{{ config('hms.clinic_name', 'HMS') }} — Token display</title>
-    <link rel="stylesheet" href="{{ asset('css/token-screen.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('css/token-screen.css') }}?v=5">
 </head>
 <body class="ts-body">
     <div id="ts-root" class="ts-root">
@@ -33,6 +33,8 @@
         </section>
     </div>
 
+    <pre id="ts-debug" class="ts-debug" hidden></pre>
+
     <nav id="ts-kiosk" class="ts-kiosk" aria-label="Queue controls" hidden>
         <button type="button" id="ts-btn-prev" class="ts-kiosk-btn" title="Previous">&#9664;</button>
         <button type="button" id="ts-btn-skip" class="ts-kiosk-btn" title="Skip">&#9166;</button>
@@ -53,6 +55,6 @@
             }
         };
     </script>
-    <script src="{{ asset('js/token-screen.js') }}?v=3"></script>
+    <script src="{{ asset('js/token-screen.js') }}?v=4"></script>
 </body>
 </html>

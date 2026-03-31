@@ -545,6 +545,11 @@ new #[Title('Appointments')] class extends Component
                     'reserved_at' => now(),
                 ]);
 
+                // Keep the queue counter in sync with reserved grid tokens (e.g. slot 50 => next walk-in should start at 51).
+                if ((int) $queue->current_token < $tokenNumber) {
+                    $queue->update(['current_token' => $tokenNumber]);
+                }
+
                 $appointment = Appointment::query()->create([
                     'patient_id' => $patient->id,
                     'family_id' => $patient->family_id,
@@ -892,26 +897,7 @@ new #[Title('Appointments')] class extends Component
 
     protected function findOrCreateActiveQueue(int $serviceId, ?int $doctorId, int $shiftId): Queue
     {
-        $existing = Queue::query()
-            ->where('service_id', $serviceId)
-            ->where('doctor_id', $doctorId)
-            ->where('shift_id', $shiftId)
-            ->whereNull('closed_at')
-            ->where('status', QueueStatus::Active)
-            ->first();
-
-        if ($existing) {
-            return $existing;
-        }
-
-        return Queue::query()->create([
-            'service_id' => $serviceId,
-            'doctor_id' => $doctorId,
-            'shift_id' => $shiftId,
-            'status' => QueueStatus::Active,
-            'current_token' => 0,
-            'current_flow_token' => 0,
-        ]);
+        return Queue::findOrCreateActiveForShift($serviceId, $doctorId, $shiftId);
     }
 
     /**

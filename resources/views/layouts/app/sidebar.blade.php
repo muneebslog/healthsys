@@ -85,6 +85,9 @@
                         <flux:sidebar.item icon="currency-dollar" :href="route('admin.service-prices')" :current="request()->routeIs('admin.service-prices')" wire:navigate>
                             {{ __('Service prices') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="wrench-screwdriver" :href="route('admin.settings')" :current="request()->routeIs('admin.settings')" wire:navigate>
+                            {{ __('Settings') }}
+                        </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif
             </flux:sidebar.nav>
