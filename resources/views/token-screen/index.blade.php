@@ -56,6 +56,6 @@
             }
         };
     </script>
-    <script src="{{ asset('js/token-screen.js') }}?v=5"></script>
+    <script src="{{ asset('js/token-screen.js') }}?v=6"></script>
 </body>
 </html>

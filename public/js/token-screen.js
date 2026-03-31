@@ -24,6 +24,12 @@
     var elDisplayError = document.getElementById('ts-display-error');
     var elKiosk = document.getElementById('ts-kiosk');
     var elDebug = document.getElementById('ts-debug');
+    var canFullscreen = !!(
+        document.fullscreenEnabled ||
+        document.webkitFullscreenEnabled ||
+        document.mozFullScreenEnabled ||
+        document.msFullscreenEnabled
+    );
 
     function getQueryParam(name) {
         var q = window.location.search || '';
@@ -120,7 +126,11 @@
 
     function showPicker() {
         elDisplay.setAttribute('hidden', 'hidden');
-        elKiosk.setAttribute('hidden', 'hidden');
+        if (cfg.controlsEnabled || canFullscreen) {
+            elKiosk.removeAttribute('hidden');
+        } else {
+            elKiosk.setAttribute('hidden', 'hidden');
+        }
         elPicker.removeAttribute('hidden');
         stopPoll();
     }
@@ -128,7 +138,7 @@
     function showDisplay() {
         elPicker.setAttribute('hidden', 'hidden');
         elDisplay.removeAttribute('hidden');
-        if (cfg.controlsEnabled) {
+        if (cfg.controlsEnabled || canFullscreen) {
             elKiosk.removeAttribute('hidden');
         }
         startPoll();
@@ -270,12 +280,6 @@
         var skip = document.getElementById('ts-btn-skip');
         var next = document.getElementById('ts-btn-next');
         if (fs) {
-            var canFullscreen = !!(
-                document.fullscreenEnabled ||
-                document.webkitFullscreenEnabled ||
-                document.mozFullScreenEnabled ||
-                document.msFullscreenEnabled
-            );
             if (!canFullscreen) {
                 fs.setAttribute('hidden', 'hidden');
             } else {
@@ -283,6 +287,11 @@
                     toggleFullscreen(fs);
                 };
             }
+        }
+        if (!cfg.controlsEnabled) {
+            if (prev) { prev.setAttribute('hidden', 'hidden'); }
+            if (skip) { skip.setAttribute('hidden', 'hidden'); }
+            if (next) { next.setAttribute('hidden', 'hidden'); }
         }
         if (prev) {
             prev.onclick = function () {
@@ -362,7 +371,11 @@
     function init() {
         wireKiosk();
         elDisplay.setAttribute('hidden', 'hidden');
-        elKiosk.setAttribute('hidden', 'hidden');
+        if (cfg.controlsEnabled || canFullscreen) {
+            elKiosk.removeAttribute('hidden');
+        } else {
+            elKiosk.setAttribute('hidden', 'hidden');
+        }
         elPicker.removeAttribute('hidden');
         loadQueues();
         renderDebug();
