@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#07090c">
     <title>{{ config('hms.clinic_name', 'HMS') }} — Token display</title>
-    <link rel="stylesheet" href="{{ asset('css/token-screen.css') }}?v=5">
+    <link rel="stylesheet" href="{{ asset('css/token-screen.css') }}?v=6">
 </head>
 <body class="ts-body">
     <div id="ts-root" class="ts-root">

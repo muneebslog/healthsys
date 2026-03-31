@@ -297,3 +297,51 @@ html {
         bottom: 2vh;
     }
 }
+
+/*
+ * Legacy Android TV (Chrome 73 / old WebView) fallback:
+ * - No clamp()/min()/max() length functions
+ * - Use plain vw/vh + media queries
+ */
+@supports not (font-size: clamp(1px, 2vw, 3px)) {
+    .ts-clinic { font-size: 4.4vw; }
+    .ts-sub { font-size: 2.8vw; }
+
+    .ts-picker-cards { gap: 2vw; }
+
+    .ts-card {
+        border-width: 1px;
+        border-radius: 10px;
+    }
+    .ts-card-doctor { font-size: 3.4vw; }
+    .ts-card-service { font-size: 2.6vw; }
+    .ts-card-meta { font-size: 2.2vw; }
+
+    .ts-muted { font-size: 2.6vw; }
+    .ts-error { font-size: 2.4vw; }
+
+    .ts-doctor { font-size: 4.0vw; }
+    .ts-service { font-size: 3.0vw; }
+    .ts-now-label { font-size: 2.2vw; }
+    .ts-patient { font-size: 3.8vw; }
+    .ts-waiting { font-size: 3.2vw; }
+
+    /* Token: prioritize height on landscape TVs to avoid overflow */
+    .ts-token {
+        font-size: 46vh;
+        text-shadow: 0 0 28px rgba(255, 176, 32, 0.25);
+    }
+    @media (orientation: portrait) {
+        .ts-token { font-size: 44vw; }
+    }
+
+    .ts-debug { font-size: 2.4vw; border-radius: 10px; border-width: 1px; }
+
+    .ts-kiosk-btn {
+        width: 8vh;
+        height: 8vh;
+        border-width: 1px;
+        border-radius: 10px;
+        font-size: 3.2vw;
+    }
+}
