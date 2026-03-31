@@ -36,6 +36,7 @@
     <pre id="ts-debug" class="ts-debug" hidden></pre>
 
     <nav id="ts-kiosk" class="ts-kiosk" aria-label="Queue controls" hidden>
+        <button type="button" id="ts-btn-fullscreen" class="ts-kiosk-btn" title="Full screen" aria-label="Toggle full screen">⛶</button>
         <button type="button" id="ts-btn-prev" class="ts-kiosk-btn" title="Previous">&#9664;</button>
         <button type="button" id="ts-btn-skip" class="ts-kiosk-btn" title="Skip">&#9166;</button>
         <button type="button" id="ts-btn-next" class="ts-kiosk-btn" title="Call next">&#9654;</button>
@@ -55,6 +56,6 @@
             }
         };
     </script>
-    <script src="{{ asset('js/token-screen.js') }}?v=4"></script>
+    <script src="{{ asset('js/token-screen.js') }}?v=5"></script>
 </body>
 </html>
