@@ -26,12 +26,20 @@ new #[Title('Doctor share out')] class extends Component
 
     public bool $showPayModal = false;
 
+    public bool $isReceptionPayout = false;
+
     public function mount(): void
     {
         $role = Auth::user()->role;
 
-        if (! config('hms.skip_role_page_guards') && ! in_array($role, [UserRole::Staff, UserRole::Admin], true)) {
+        if (! config('hms.skip_role_page_guards') && ! in_array($role, [UserRole::Staff, UserRole::Admin, UserRole::FinanceManager], true)) {
             abort(403);
+        }
+
+        $this->isReceptionPayout = $role === UserRole::Staff;
+
+        if ($this->isReceptionPayout) {
+            $this->period = 'today';
         }
 
         $this->syncDatesFromPeriod();
@@ -39,6 +47,10 @@ new #[Title('Doctor share out')] class extends Component
 
     public function updatedPeriod(string $value): void
     {
+        if ($this->isReceptionPayout) {
+            $this->period = 'today';
+        }
+
         if ($value !== 'custom') {
             $this->syncDatesFromPeriod();
         }
@@ -177,6 +189,12 @@ new #[Title('Doctor share out')] class extends Component
             'dateTo' => __('to'),
         ]);
 
+        if ($this->isReceptionPayout && ($this->dateFrom !== now()->toDateString() || $this->dateTo !== now()->toDateString())) {
+            $this->addError('payout', __('Reception can only pay today’s doctor share (daily payout).'));
+
+            return;
+        }
+
         if ($this->unpaidLines->isEmpty()) {
             $this->addError('payout', __('No unpaid doctor share in this period.'));
 
@@ -198,6 +216,12 @@ new #[Title('Doctor share out')] class extends Component
             'dateFrom' => __('from'),
             'dateTo' => __('to'),
         ]);
+
+        if ($this->isReceptionPayout && ($this->dateFrom !== now()->toDateString() || $this->dateTo !== now()->toDateString())) {
+            $this->addError('payout', __('Reception can only pay today’s doctor share (daily payout).'));
+
+            return;
+        }
 
         $doctorId = (int) $this->doctorId;
         $from = $this->dateFrom;
@@ -291,9 +315,11 @@ new #[Title('Doctor share out')] class extends Component
                 <flux:label>{{ __('Duration') }}</flux:label>
                 <flux:select wire:model.live="period">
                     <flux:select.option value="today">{{ __('Today') }}</flux:select.option>
-                    <flux:select.option value="7d">{{ __('Last 7 days') }}</flux:select.option>
-                    <flux:select.option value="15d">{{ __('Last 15 days') }}</flux:select.option>
-                    <flux:select.option value="custom">{{ __('Custom range') }}</flux:select.option>
+                    @if (! $isReceptionPayout)
+                        <flux:select.option value="7d">{{ __('Last 7 days') }}</flux:select.option>
+                        <flux:select.option value="15d">{{ __('Last 15 days') }}</flux:select.option>
+                        <flux:select.option value="custom">{{ __('Custom range') }}</flux:select.option>
+                    @endif
                 </flux:select>
             </flux:field>
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\ShiftStatus;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -67,6 +68,21 @@ class Shift extends Model
     }
 
     public function totalDoctorPayouts(): int
+    {
+        $from = $this->opened_at ?? $this->created_at ?? now()->startOfDay();
+        $to = $this->closed_at ?? now();
+
+        return (int) InvoiceService::query()
+            ->join('doctor_share_ledger_items', 'doctor_share_ledger_items.invoice_service_id', '=', 'invoice_services.id')
+            ->join('doctor_share_ledger', 'doctor_share_ledger.id', '=', 'doctor_share_ledger_items.ledger_id')
+            ->join('users', 'users.id', '=', 'doctor_share_ledger.paid_by')
+            ->whereIn('invoice_services.invoice_id', $this->invoices()->pluck('id'))
+            ->where('users.role', UserRole::Staff)
+            ->whereBetween('doctor_share_ledger.paid_at', [$from, $to])
+            ->sum('invoice_services.doctor_share_amount');
+    }
+
+    public function totalDoctorSharesAccrued(): int
     {
         return (int) Invoice::whereIn('invoices.id', $this->invoices()->pluck('id'))
             ->join('invoice_services', 'invoices.id', '=', 'invoice_services.invoice_id')
