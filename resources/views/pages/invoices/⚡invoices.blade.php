@@ -1,8 +1,10 @@
 <?php
 
 use App\Enums\InvoiceStatus;
+use App\Enums\ShiftStatus;
 use App\Enums\UserRole;
 use App\Models\Invoice;
+use App\Models\Shift;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -19,6 +21,8 @@ new #[Title('Invoices')] class extends Component
      * Empty string = all statuses (easier to bind to Flux select).
      */
     public string $status = '';
+
+    public bool $showAllShifts = false;
 
     public function mount(): void
     {
@@ -39,6 +43,11 @@ new #[Title('Invoices')] class extends Component
     }
 
     public function updatingStatus(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingShowAllShifts(): void
     {
         $this->resetPage();
     }
@@ -73,10 +82,29 @@ new #[Title('Invoices')] class extends Component
     }
 
     #[Computed]
+    public function activeShift(): ?Shift
+    {
+        return Shift::query()
+            ->where('status', ShiftStatus::Open)
+            ->first();
+    }
+
+    #[Computed]
     public function invoices()
     {
         return Invoice::query()
             ->with(['patient', 'shift'])
+            ->when(! $this->showAllShifts, function ($q): void {
+                $shiftId = $this->activeShift?->id;
+
+                if (! $shiftId) {
+                    $q->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $q->where('shift_id', $shiftId);
+            })
             ->when(filled($this->status), function ($q): void {
                 $q->where('status', $this->status);
             })
@@ -145,10 +173,27 @@ new #[Title('Invoices')] class extends Component
                     </flux:select>
                 </flux:field>
 
-                <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                    <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400/90 ring-1 ring-emerald-600/20"></span>
-                    {{ __('Tip: printing is available for staff/admin.') }}
-                </div>
+                <flux:field>
+                    <flux:label>{{ __('Shift') }}</flux:label>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <flux:checkbox wire:model.live="showAllShifts" :label="__('Show all shifts')" />
+
+                        @if (! $this->showAllShifts)
+                            @if ($this->activeShift?->opened_at)
+                                <flux:badge color="emerald">
+                                    {{ __('Current') }}: {{ $this->activeShift->opened_at->timezone(config('app.timezone'))->format('M j, Y') }}
+                                </flux:badge>
+                            @else
+                                <flux:badge color="zinc">{{ __('No active shift') }}</flux:badge>
+                            @endif
+                        @endif
+                    </div>
+                </flux:field>
+            </div>
+
+            <div class="mt-3 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400/90 ring-1 ring-emerald-600/20"></span>
+                {{ __('Tip: printing is available for staff/admin.') }}
             </div>
         </div>
 

@@ -59,11 +59,49 @@ test('staff can view invoices index', function () {
         'status' => InvoiceStatus::Paid,
     ]);
 
+    $otherFamily = Family::query()->create(['phone' => '03001234570']);
+    $otherPatient = Patient::query()->create([
+        'family_id' => $otherFamily->id,
+        'name' => 'Other Shift Patient',
+        'gender' => 'male',
+        'type' => PatientType::Head,
+        'relation_to_head' => null,
+    ]);
+    $otherFamily->update(['head_id' => $otherPatient->id]);
+
+    $otherShift = Shift::query()->create([
+        'opened_by' => $user->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Closed,
+        'opened_at' => now()->subDay(),
+        'closed_at' => now()->subDay()->addHours(8),
+        'closed_by' => $user->id,
+    ]);
+
+    $otherVisit = Visit::query()->create([
+        'patient_id' => $otherPatient->id,
+        'family_id' => $otherFamily->id,
+        'doctor_id' => null,
+        'shift_id' => $otherShift->id,
+        'status' => VisitStatus::InProgress,
+    ]);
+
+    Invoice::query()->create([
+        'visit_id' => $otherVisit->id,
+        'patient_id' => $otherPatient->id,
+        'shift_id' => $otherShift->id,
+        'total_amount' => 700,
+        'discount' => 0,
+        'final_amount' => 700,
+        'status' => InvoiceStatus::Paid,
+    ]);
+
     /** @noinspection PhpUndefinedMethodInspection */
     $this->actingAs($user)
         ->get(route('invoices.index'))
         ->assertSuccessful()
-        ->assertSee('Test Patient');
+        ->assertSee('Test Patient')
+        ->assertDontSee('Other Shift Patient');
 });
 
 test('admin can view invoices index', function () {
