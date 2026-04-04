@@ -43,7 +43,8 @@ new #[Title('Lab checkout')] class extends Component
 
     public ?int $pendingTestId = null;
 
-    public int $discountPercent = 0;
+    /** Null = no discount entered (treated as 0% for totals); avoids coercing an empty number field to 0. */
+    public ?int $discountPercent = null;
 
     public bool $showNewFamilyModal = false;
 
@@ -131,7 +132,7 @@ new #[Title('Lab checkout')] class extends Component
     #[Computed]
     public function discountAmountPreview(): int
     {
-        $p = max(0, min(100, $this->discountPercent));
+        $p = $this->effectiveDiscountPercent();
 
         return (int) floor($this->subtotalAmount * $p / 100);
     }
@@ -373,7 +374,7 @@ new #[Title('Lab checkout')] class extends Component
         $this->validate([
             'selectedPatientId' => ['required', 'exists:patients,id'],
             'selectedTestIds' => ['required', 'array', 'min:1'],
-            'discountPercent' => ['required', 'integer', 'min:0', 'max:100'],
+            'discountPercent' => ['nullable', 'integer', 'min:0', 'max:100'],
         ], [], [
             'selectedPatientId' => __('patient'),
             'selectedTestIds' => __('tests'),
@@ -404,9 +405,10 @@ new #[Title('Lab checkout')] class extends Component
                     $orderedTests[] = $test;
                 }
 
-                $lines = LabInvoiceLineAllocator::allocateLines($orderedTests, $this->discountPercent);
+                $discountPct = $this->effectiveDiscountPercent();
+                $lines = LabInvoiceLineAllocator::allocateLines($orderedTests, $discountPct);
                 $subtotal = (int) array_sum(array_column($lines, 'list_price'));
-                $discountTotal = (int) floor($subtotal * max(0, min(100, $this->discountPercent)) / 100);
+                $discountTotal = (int) floor($subtotal * $discountPct / 100);
                 $finalAmount = $subtotal - $discountTotal;
 
                 $visit = Visit::query()->create([
@@ -424,7 +426,7 @@ new #[Title('Lab checkout')] class extends Component
                     'kind' => InvoiceKind::Lab,
                     'total_amount' => $subtotal,
                     'discount' => $discountTotal,
-                    'discount_percent' => max(0, min(100, $this->discountPercent)),
+                    'discount_percent' => $discountPct,
                     'final_amount' => $finalAmount,
                     'status' => InvoiceStatus::Paid,
                 ]);
@@ -460,8 +462,13 @@ new #[Title('Lab checkout')] class extends Component
     {
         $this->selectedTestIds = [];
         $this->pendingTestId = null;
-        $this->discountPercent = 0;
+        $this->discountPercent = null;
         unset($this->selectedTestsRows, $this->subtotalAmount, $this->discountAmountPreview, $this->finalAmountPreview);
+    }
+
+    protected function effectiveDiscountPercent(): int
+    {
+        return max(0, min(100, (int) ($this->discountPercent ?? 0)));
     }
 
     /**
@@ -537,52 +544,32 @@ new #[Title('Lab checkout')] class extends Component
         <flux:card class="space-y-6 p-6 sm:p-8">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <flux:heading size="lg">{{ __('1. Patient') }}</flux:heading>
-                <flux:button.group>
-                    <flux:button size="sm" :variant="$quickMode ? 'primary' : 'outline'" type="button" wire:click="switchToQuickMode">
-                        {{ __('Quick test (no phone)') }}
-                    </flux:button>
-                    <flux:button size="sm" :variant="$quickMode ? 'outline' : 'primary'" type="button" wire:click="switchToPhoneMode">
-                        {{ __('Phone lookup') }}
-                    </flux:button>
-                </flux:button.group>
+                {{-- Quick test (no phone) toggle hidden for now; walk-in still has it. --}}
             </div>
 
-            @if ($quickMode)
-                <form wire:submit="createQuickWalkIn" class="flex flex-col gap-4 sm:flex-row sm:items-end">
-                    <flux:field class="min-w-0 flex-1">
-                        <flux:label>{{ __('Name') }}</flux:label>
-                        <flux:input wire:model.live="quickName" autocomplete="off" placeholder="{{ __('e.g. Ahmed, Ammi, Uncle') }}" icon="user" />
-                        <flux:error name="quickName" />
-                    </flux:field>
-                    <flux:button type="submit" variant="primary" icon="check" :disabled="! $this->activeShift" wire:loading.attr="disabled">
-                        {{ __('Start') }}
-                    </flux:button>
-                </form>
-            @else
-                <form wire:submit="lookupPhone" class="flex flex-col gap-4 sm:flex-row sm:items-end">
-                    @php($phoneDigitCount = strlen(preg_replace('/\D/', '', $phoneQuery)))
-                    <flux:field
-                        class="min-w-0 flex-1"
-                        :description:trailing="__(':current / :need digits', ['current' => $phoneDigitCount, 'need' => 11])"
-                    >
-                        <flux:label>{{ __('Family phone') }}</flux:label>
-                        <flux:input
-                            wire:key="lab-phone-{{ $phoneFieldVersion }}"
-                            wire:model.live="phoneQuery"
-                            type="tel"
-                            inputmode="numeric"
-                            autocomplete="tel"
-                            placeholder="03001234567"
-                            icon="device-phone-mobile"
-                            :invalid="$phoneDigitCount > 0 && $phoneDigitCount !== 11"
-                        />
-                        <flux:error name="phoneQuery" />
-                    </flux:field>
-                    <flux:button type="submit" variant="primary" icon="magnifying-glass" :disabled="! $this->activeShift" wire:loading.attr="disabled">
-                        {{ __('Search') }}
-                    </flux:button>
-                </form>
-            @endif
+            <form wire:submit="lookupPhone" class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                @php($phoneDigitCount = strlen(preg_replace('/\D/', '', $phoneQuery)))
+                <flux:field
+                    class="min-w-0 flex-1"
+                    :description:trailing="__(':current / :need digits', ['current' => $phoneDigitCount, 'need' => 11])"
+                >
+                    <flux:label>{{ __('Family phone') }}</flux:label>
+                    <flux:input
+                        wire:key="lab-phone-{{ $phoneFieldVersion }}"
+                        wire:model.live="phoneQuery"
+                        type="tel"
+                        inputmode="numeric"
+                        autocomplete="tel"
+                        placeholder="03001234567"
+                        icon="device-phone-mobile"
+                        :invalid="$phoneDigitCount > 0 && $phoneDigitCount !== 11"
+                    />
+                    <flux:error name="phoneQuery" />
+                </flux:field>
+                <flux:button type="submit" variant="primary" icon="magnifying-glass" :disabled="! $this->activeShift" wire:loading.attr="disabled">
+                    {{ __('Search') }}
+                </flux:button>
+            </form>
 
             @if ($this->family)
                 <div class="space-y-3">
@@ -688,7 +675,7 @@ new #[Title('Lab checkout')] class extends Component
                         <span class="tabular-nums font-medium text-zinc-900 dark:text-white">{{ $this->formatMoney($this->subtotalAmount) }}</span>
                     </div>
                     <div class="flex justify-between text-sm text-zinc-600 dark:text-zinc-400">
-                        <span>{{ __('Discount') }} ({{ $discountPercent }}%)</span>
+                        <span>{{ __('Discount') }}@if ($discountPercent !== null) ({{ $discountPercent }}%)@endif</span>
                         <span class="tabular-nums font-medium text-amber-700 dark:text-amber-400">−{{ $this->formatMoney($this->discountAmountPreview) }}</span>
                     </div>
                     <div class="flex justify-between border-t border-zinc-200 pt-2 text-sm font-semibold text-zinc-900 dark:border-zinc-600 dark:text-white">

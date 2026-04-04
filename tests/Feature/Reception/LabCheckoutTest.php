@@ -82,6 +82,51 @@ test('staff can checkout lab tests with 0, 50, and 100 percent discount', functi
     [100, 1500, 0],
 ]);
 
+test('lab checkout treats null discount percent like zero', function () {
+    $staff = User::factory()->create(['role' => UserRole::Staff]);
+
+    Shift::query()->create([
+        'opened_by' => $staff->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+
+    $family = Family::query()->create(['phone' => '03009998877']);
+    $patient = Patient::query()->create([
+        'family_id' => $family->id,
+        'name' => 'Null Discount Patient',
+        'gender' => 'male',
+        'type' => PatientType::Head,
+        'relation_to_head' => null,
+    ]);
+    $family->update(['head_id' => $patient->id]);
+
+    $lt = LabTest::factory()->create([
+        'test_code' => 'NULL-D',
+        'price' => 800,
+        'hospital_share' => 50,
+        'lab_share' => 50,
+    ]);
+
+    Livewire::actingAs($staff)
+        ->test('pages::reception.lab')
+        ->set('phoneQuery', '03009998877')
+        ->call('lookupPhone')
+        ->set('selectedPatientId', $patient->id)
+        ->set('selectedTestIds', [$lt->id])
+        ->set('discountPercent', null)
+        ->call('createAndPrint')
+        ->assertHasNoErrors();
+
+    $invoice = Invoice::query()->with('labTests')->latest('id')->first();
+
+    expect($invoice)->not->toBeNull()
+        ->and((int) $invoice->discount)->toBe(0)
+        ->and((int) $invoice->discount_percent)->toBe(0)
+        ->and((int) $invoice->final_amount)->toBe(800);
+});
+
 test('staff can print a lab invoice and see test codes', function () {
     $staff = User::factory()->create(['role' => UserRole::Staff]);
 
