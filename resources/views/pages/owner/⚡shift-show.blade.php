@@ -15,7 +15,7 @@ new #[Title('Shift')] class extends Component
     {
         $role = Auth::user()->role;
 
-        if (! config('hms.skip_role_page_guards') && $role !== UserRole::Owner) {
+        if (! config('hms.skip_role_page_guards') && ! in_array($role, [UserRole::Owner, UserRole::FinanceManager], true)) {
             abort(403);
         }
 

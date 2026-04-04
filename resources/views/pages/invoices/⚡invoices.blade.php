@@ -32,7 +32,7 @@ new #[Title('Invoices')] class extends Component
 
         $role = Auth::user()?->role;
 
-        if (! in_array($role, [UserRole::Staff, UserRole::Admin, UserRole::Owner], true)) {
+        if (! in_array($role, [UserRole::Staff, UserRole::Admin, UserRole::Owner, UserRole::FinanceManager], true)) {
             abort(403);
         }
     }

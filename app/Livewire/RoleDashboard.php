@@ -23,6 +23,7 @@ class RoleDashboard extends Component
         $ownerEnabled = $skipGuards || $role === UserRole::Owner;
         $doctorEnabled = $skipGuards ? $doctorLinked : $role === UserRole::Doctor;
         $adminEnabled = $skipGuards || $role === UserRole::Admin;
+        $financeEnabled = $skipGuards || $role === UserRole::FinanceManager;
 
         $sections = [
             [
@@ -162,10 +163,74 @@ class RoleDashboard extends Component
             [
                 'id' => 'finance',
                 'title' => __('Finance manager'),
-                'description' => __('Dashboard items can be added over time.'),
+                'description' => __('Audits, money trail, shifts, and exports.'),
                 'badgeColor' => 'violet',
                 'headerGradientClass' => 'bg-gradient-to-br from-zinc-50 via-white to-violet-50/35 dark:from-zinc-900 dark:via-zinc-950 dark:to-violet-950/25',
-                'items' => [],
+                'items' => [
+                    [
+                        'key' => 'finance.dashboard',
+                        'label' => __('Finance dashboard'),
+                        'description' => __('Revenue, expenses, payouts, and implied net.'),
+                        'href' => route('finance.dashboard'),
+                        'enabled' => $financeEnabled,
+                    ],
+                    [
+                        'key' => 'owner.shifts',
+                        'label' => __('Shifts'),
+                        'description' => __('Today’s shift and closed shift history.'),
+                        'href' => route('owner.shifts'),
+                        'enabled' => $financeEnabled,
+                    ],
+                    [
+                        'key' => 'invoices.index',
+                        'label' => __('Invoices'),
+                        'description' => __('Search and verify invoice register.'),
+                        'href' => route('invoices.index'),
+                        'enabled' => $financeEnabled,
+                    ],
+                    [
+                        'key' => 'finance.money-trail',
+                        'label' => __('Money trail'),
+                        'description' => __('Collections, expenses, and payouts in order.'),
+                        'href' => route('finance.money-trail'),
+                        'enabled' => $financeEnabled,
+                    ],
+                    [
+                        'key' => 'finance.expenses',
+                        'label' => __('Shift expenses'),
+                        'description' => __('Expense lines across shifts.'),
+                        'href' => route('finance.expenses'),
+                        'enabled' => $financeEnabled,
+                    ],
+                    [
+                        'key' => 'finance.ledger',
+                        'label' => __('Doctor payout ledger'),
+                        'description' => __('Recorded payout batches and details.'),
+                        'href' => route('finance.ledger'),
+                        'enabled' => $financeEnabled,
+                    ],
+                    [
+                        'key' => 'finance.audit',
+                        'label' => __('Audit'),
+                        'description' => __('Discounts, cancellations, shift closes.'),
+                        'href' => route('finance.audit'),
+                        'enabled' => $financeEnabled,
+                    ],
+                    [
+                        'key' => 'finance.exports',
+                        'label' => __('Exports'),
+                        'description' => __('CSV downloads for accounting.'),
+                        'href' => route('finance.exports'),
+                        'enabled' => $financeEnabled,
+                    ],
+                    [
+                        'key' => 'reception.doctor-share-out',
+                        'label' => __('Doc share audit'),
+                        'description' => __('Review unpaid shares and payout history (read-only).'),
+                        'href' => route('reception.doctor-share-out'),
+                        'enabled' => $financeEnabled,
+                    ],
+                ],
             ],
         ];
 

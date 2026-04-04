@@ -40,6 +40,38 @@
                     </flux:sidebar.group>
                 @endif
 
+                @if (config('hms.skip_role_page_guards') || auth()->user()->role->value === 'finance_manager')
+                    <flux:sidebar.group :heading="__('Finance')" class="grid">
+                        <flux:sidebar.item icon="chart-pie" :href="route('finance.dashboard')" :current="request()->routeIs('finance.dashboard')" wire:navigate>
+                            {{ __('Finance home') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="chart-bar" :href="route('owner.shifts')" :current="request()->routeIs('owner.shifts') || request()->routeIs('owner.shifts.show')" wire:navigate>
+                            {{ __('Shifts') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="currency-dollar" :href="route('invoices.index')" :current="request()->routeIs('invoices.index')" wire:navigate>
+                            {{ __('Invoices') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="arrow-path" :href="route('finance.money-trail')" :current="request()->routeIs('finance.money-trail')" wire:navigate>
+                            {{ __('Money trail') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="receipt-percent" :href="route('finance.expenses')" :current="request()->routeIs('finance.expenses')" wire:navigate>
+                            {{ __('Expenses') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="book-open" :href="route('finance.ledger')" :current="request()->routeIs('finance.ledger') || request()->routeIs('finance.ledger.show')" wire:navigate>
+                            {{ __('Payout ledger') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="shield-check" :href="route('finance.audit')" :current="request()->routeIs('finance.audit')" wire:navigate>
+                            {{ __('Audit') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="arrow-down-tray" :href="route('finance.exports')" :current="request()->routeIs('finance.exports')" wire:navigate>
+                            {{ __('Exports') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="currency-dollar" :href="route('reception.doctor-share-out')" :current="request()->routeIs('reception.doctor-share-out')" wire:navigate>
+                            {{ __('Doc share audit') }}
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endif
+
                 @if (config('hms.skip_role_page_guards') || auth()->user()->role->value === 'owner')
                     <flux:sidebar.group :heading="__('Owner')" class="grid">
                         <flux:sidebar.item icon="chart-bar" :href="route('owner.shifts')" :current="request()->routeIs('owner.shifts') || request()->routeIs('owner.shifts.show')" wire:navigate>

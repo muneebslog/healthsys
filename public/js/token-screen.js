@@ -10,6 +10,8 @@
     var queueId = null;
     var pollTimer = null;
     var secret = cfg.controlSecret || '';
+    /** Avoid repeating the same announcement on every poll; reset when queue changes. */
+    var lastAnnounceSignature = null;
 
     var elPicker = document.getElementById('ts-picker');
     var elPickerCards = document.getElementById('ts-picker-cards');
@@ -125,6 +127,7 @@
     }
 
     function showPicker() {
+        lastAnnounceSignature = null;
         elDisplay.setAttribute('hidden', 'hidden');
         if (cfg.controlsEnabled || canFullscreen) {
             elKiosk.removeAttribute('hidden');
@@ -197,9 +200,60 @@
     }
 
     function selectQueue(id) {
+        lastAnnounceSignature = null;
         queueId = id;
         showDisplay();
         tickDisplay();
+    }
+
+    /**
+     * Speak when the serving token changes (token number and/or patient name).
+     * Uses the Web Speech API; no-op if unavailable (e.g. very old browsers).
+     */
+    function announceServing(p) {
+        if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+            return;
+        }
+        if (p.current_flow_token == null) {
+            lastAnnounceSignature = null;
+            return;
+        }
+        var name = p.patient_name && String(p.patient_name).trim() ? String(p.patient_name).trim() : '';
+        var sig = String(p.current_flow_token) + '|' + name;
+        if (sig === lastAnnounceSignature) {
+            return;
+        }
+        lastAnnounceSignature = sig;
+        var tokenLabel = 'T-' + String(p.current_flow_token);
+        var text = name
+            ? 'Now serving token ' + tokenLabel + ', ' + name + '.'
+            : 'Now serving token ' + tokenLabel + '.';
+        function runSpeak() {
+            try {
+                window.speechSynthesis.cancel();
+                var u = new SpeechSynthesisUtterance(text);
+                u.lang = document.documentElement.lang || 'en';
+                u.rate = 0.95;
+                window.speechSynthesis.speak(u);
+            } catch (e) {
+                /* ignore */
+            }
+        }
+        if (window.speechSynthesis.getVoices().length) {
+            runSpeak();
+        } else {
+            var done = false;
+            function once() {
+                if (done) {
+                    return;
+                }
+                done = true;
+                window.speechSynthesis.onvoiceschanged = null;
+                runSpeak();
+            }
+            window.speechSynthesis.onvoiceschanged = once;
+            window.setTimeout(once, 600);
+        }
     }
 
     function applyDisplayPayload(p) {
@@ -220,6 +274,7 @@
         }
         elWaiting.textContent = String(p.remaining_count != null ? p.remaining_count : 0);
         elDisplayError.setAttribute('hidden', 'hidden');
+        announceServing(p);
     }
 
     function tickDisplay() {

@@ -29,6 +29,11 @@ new #[Title('Doctor share out')] class extends Component
 
     public bool $isReceptionPayout = false;
 
+    /**
+     * Finance managers audit unpaid lines and history; they cannot record payouts.
+     */
+    public bool $isFinanceAuditOnly = false;
+
     public function mount(): void
     {
         $role = Auth::user()->role;
@@ -38,6 +43,7 @@ new #[Title('Doctor share out')] class extends Component
         }
 
         $this->isReceptionPayout = $role === UserRole::Staff;
+        $this->isFinanceAuditOnly = $role === UserRole::FinanceManager;
 
         if ($this->isReceptionPayout) {
             $this->period = 'today';
@@ -178,6 +184,10 @@ new #[Title('Doctor share out')] class extends Component
 
     public function confirmPay(): void
     {
+        if ($this->isFinanceAuditOnly) {
+            return;
+        }
+
         $this->resetErrorBag('payout');
 
         $this->validate([
@@ -207,6 +217,10 @@ new #[Title('Doctor share out')] class extends Component
 
     public function logAndPay(): void
     {
+        if ($this->isFinanceAuditOnly) {
+            return;
+        }
+
         $this->validate([
             'doctorId' => ['required', 'exists:doctors,id'],
             'dateFrom' => ['required', 'date'],
@@ -302,9 +316,19 @@ new #[Title('Doctor share out')] class extends Component
                     {{ __('Review unpaid doctor shares from invoices, then log cash paid out. This is separate from patient invoice payment — it settles what the clinic owes the doctor.') }}
                 </flux:text>
             </div>
-            <flux:badge color="amber" class="shrink-0">{{ __('Reception') }}</flux:badge>
+            @if ($isFinanceAuditOnly)
+                <flux:badge color="violet" class="shrink-0">{{ __('Finance audit') }}</flux:badge>
+            @else
+                <flux:badge color="amber" class="shrink-0">{{ __('Reception') }}</flux:badge>
+            @endif
         </div>
     </header>
+
+    @if ($isFinanceAuditOnly)
+        <flux:callout icon="information-circle" color="violet">
+            {{ __('You can review unpaid shares and payout history. Recording payouts is limited to reception and admin.') }}
+        </flux:callout>
+    @endif
 
     <section class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
         <div class="grid gap-6 lg:grid-cols-12 lg:items-end">
@@ -401,20 +425,22 @@ new #[Title('Doctor share out')] class extends Component
                     </div>
                 @endif
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <flux:button
-                        variant="primary"
-                        icon="currency-dollar"
-                        wire:click="confirmPay"
-                        wire:loading.attr="disabled"
-                    >
-                        <span wire:loading.remove wire:target="confirmPay">{{ __('Log & pay') }}</span>
-                        <span wire:loading wire:target="confirmPay">{{ __('Checking…') }}</span>
-                    </flux:button>
-                    <flux:text class="text-sm text-zinc-500">
-                        {{ __('Marks every unpaid line in the table below as settled.') }}
-                    </flux:text>
-                </div>
+                @if (! $isFinanceAuditOnly)
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <flux:button
+                            variant="primary"
+                            icon="currency-dollar"
+                            wire:click="confirmPay"
+                            wire:loading.attr="disabled"
+                        >
+                            <span wire:loading.remove wire:target="confirmPay">{{ __('Log & pay') }}</span>
+                            <span wire:loading wire:target="confirmPay">{{ __('Checking…') }}</span>
+                        </flux:button>
+                        <flux:text class="text-sm text-zinc-500">
+                            {{ __('Marks every unpaid line in the table below as settled.') }}
+                        </flux:text>
+                    </div>
+                @endif
             </div>
 
             <div class="space-y-6 lg:col-span-3">
