@@ -31,6 +31,8 @@ new #[Title('Doctors')] class extends Component
 
     public bool $is_on_payroll = false;
 
+    public bool $first_five_slips_full_share = false;
+
     public ?int $user_id = null;
 
     public ?int $pendingDeleteId = null;
@@ -75,6 +77,7 @@ new #[Title('Doctors')] class extends Component
         $this->end_time = '';
         $this->status = 'active';
         $this->is_on_payroll = false;
+        $this->first_five_slips_full_share = false;
         $this->user_id = null;
         $this->resetErrorBag();
         $this->showModal = true;
@@ -91,6 +94,7 @@ new #[Title('Doctors')] class extends Component
         $this->end_time = $this->timeInputValue($d->end_time);
         $this->status = $d->status;
         $this->is_on_payroll = $d->is_on_payroll;
+        $this->first_five_slips_full_share = $d->first_five_slips_full_share;
         $this->user_id = $d->user_id;
         $this->resetErrorBag();
         $this->showModal = true;
@@ -110,6 +114,7 @@ new #[Title('Doctors')] class extends Component
             'end_time' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
             'status' => ['required', 'in:active,inactive'],
             'is_on_payroll' => ['boolean'],
+            'first_five_slips_full_share' => ['boolean'],
             'user_id' => ['nullable', 'exists:users,id'],
         ], [], [
             'name' => __('name'),
@@ -158,6 +163,7 @@ new #[Title('Doctors')] class extends Component
             'end_time' => $endEmpty ? null : ($validated['end_time'].':00'),
             'status' => $validated['status'],
             'is_on_payroll' => $validated['is_on_payroll'],
+            'first_five_slips_full_share' => $validated['first_five_slips_full_share'],
             'user_id' => $validated['user_id'],
         ];
 
@@ -252,7 +258,7 @@ new #[Title('Doctors')] class extends Component
             </div>
         @else
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[800px] text-left text-sm">
+                <table class="w-full min-w-[920px] text-left text-sm">
                     <thead class="border-b border-zinc-100 bg-zinc-50/80 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50">
                         <tr>
                             <th class="px-6 py-3">{{ __('Name') }}</th>
@@ -260,6 +266,7 @@ new #[Title('Doctors')] class extends Component
                             <th class="px-6 py-3">{{ __('Phone') }}</th>
                             <th class="px-6 py-3">{{ __('Reception hours') }}</th>
                             <th class="px-6 py-3">{{ __('Payroll') }}</th>
+                            <th class="px-6 py-3">{{ __('First 5 slips') }}</th>
                             <th class="px-6 py-3">{{ __('Login') }}</th>
                             <th class="px-6 py-3">{{ __('Status') }}</th>
                             <th class="px-6 py-3 text-end">{{ __('Actions') }}</th>
@@ -283,6 +290,13 @@ new #[Title('Doctors')] class extends Component
                                         <flux:badge color="indigo">{{ __('Yes') }}</flux:badge>
                                     @else
                                         <flux:badge color="zinc">{{ __('No') }}</flux:badge>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4">
+                                    @if ($row->first_five_slips_full_share)
+                                        <flux:badge color="amber">{{ __('100%') }}</flux:badge>
+                                    @else
+                                        <flux:badge color="zinc">{{ __('—') }}</flux:badge>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400">
@@ -352,6 +366,15 @@ new #[Title('Doctors')] class extends Component
                 <div class="flex items-center justify-between gap-4">
                     <flux:label>{{ __('On payroll') }}</flux:label>
                     <flux:switch wire:model="is_on_payroll" />
+                </div>
+            </flux:field>
+            <flux:field>
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <flux:label>{{ __('First 5 slips: full doctor share') }}</flux:label>
+                        <flux:text class="mt-0.5 text-sm text-zinc-500">{{ __('First five invoice lines per day use 100% of the line amount; further lines use the service’s assigned share %.') }}</flux:text>
+                    </div>
+                    <flux:switch wire:model="first_five_slips_full_share" />
                 </div>
             </flux:field>
             <flux:field>

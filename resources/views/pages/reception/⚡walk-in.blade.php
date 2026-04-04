@@ -19,6 +19,7 @@ use App\Models\ServicePrice;
 use App\Models\Shift;
 use App\Models\Visit;
 use App\Models\VisitService;
+use App\Services\DoctorShareCalculator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Js;
@@ -567,12 +568,22 @@ new #[Title('Walk-in')] class extends Component
                     'status' => InvoiceStatus::Paid,
                 ]);
 
+                $nextSlipIndexByDoctor = [];
+
                 foreach ($this->lineItems as $row) {
-                    $sp = ServicePrice::query()->findOrFail($row['service_price_id']);
+                    $sp = ServicePrice::query()->with('doctor')->findOrFail($row['service_price_id']);
                     $charged = (int) $row['price'];
-                    $docShare = $sp->doctor_id
-                        ? (int) round($charged * $sp->doctor_share / 100)
-                        : 0;
+                    $doctorId = $row['doctor_id'] !== null ? (int) $row['doctor_id'] : null;
+                    if ($sp->doctor_id && $doctorId !== null) {
+                        if (! isset($nextSlipIndexByDoctor[$doctorId])) {
+                            $nextSlipIndexByDoctor[$doctorId] = DoctorShareCalculator::countSlipsTodayForDoctor($doctorId);
+                        }
+                        $slipIndex = $nextSlipIndexByDoctor[$doctorId];
+                        $nextSlipIndexByDoctor[$doctorId] = $slipIndex + 1;
+                        $docShare = DoctorShareCalculator::amountForLine($sp, $charged, $slipIndex);
+                    } else {
+                        $docShare = 0;
+                    }
 
                     InvoiceService::query()->create([
                         'invoice_id' => $invoice->id,

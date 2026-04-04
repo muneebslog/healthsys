@@ -12,13 +12,14 @@ class Doctor extends Model
 {
     protected $fillable = [
         'name', 'specialization', 'phone', 'start_time', 'end_time',
-        'status', 'is_on_payroll', 'user_id',
+        'status', 'is_on_payroll', 'first_five_slips_full_share', 'user_id',
     ];
 
     protected function casts(): array
     {
         return [
             'is_on_payroll' => 'boolean',
+            'first_five_slips_full_share' => 'boolean',
         ];
     }
 

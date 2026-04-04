@@ -21,6 +21,7 @@ use App\Models\ServicePrice;
 use App\Models\Shift;
 use App\Models\Visit;
 use App\Models\VisitService;
+use App\Services\DoctorShareCalculator;
 use App\Services\VeevoTechSmsService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -692,9 +693,10 @@ new #[Title('Appointments')] class extends Component
                     'status' => InvoiceStatus::Paid,
                 ]);
 
-                $docShare = $sp->doctor_id
-                    ? (int) round($charged * $sp->doctor_share / 100)
+                $slipIndexToday = $sp->doctor_id
+                    ? DoctorShareCalculator::countSlipsTodayForDoctor($appointment->doctor_id)
                     : 0;
+                $docShare = DoctorShareCalculator::amountForLine($sp, $charged, $slipIndexToday);
 
                 InvoiceService::query()->create([
                     'invoice_id' => $invoice->id,

@@ -6,6 +6,7 @@ use App\Models\DoctorShareLedger;
 use App\Models\DoctorShareLedgerItem;
 use App\Models\InvoiceService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Js;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -227,8 +228,10 @@ new #[Title('Doctor share out')] class extends Component
         $from = $this->dateFrom;
         $to = $this->dateTo;
 
+        $newLedgerId = null;
+
         try {
-            DB::transaction(function () use ($doctorId, $from, $to): void {
+            $newLedgerId = DB::transaction(function () use ($doctorId, $from, $to): int {
                 $ids = DB::table('invoice_services')
                     ->join('invoices', 'invoices.id', '=', 'invoice_services.invoice_id')
                     ->where('invoice_services.doctor_id', $doctorId)
@@ -265,6 +268,8 @@ new #[Title('Doctor share out')] class extends Component
                 }
 
                 InvoiceService::query()->whereKey($ids)->update(['doctor_share_paid' => true]);
+
+                return $ledger->id;
             });
         } catch (\RuntimeException $e) {
             if ($e->getMessage() === 'empty') {
@@ -278,6 +283,9 @@ new #[Title('Doctor share out')] class extends Component
         $this->showPayModal = false;
         $this->payNotes = '';
         unset($this->unpaidLines, $this->summaryByService, $this->grandTotal, $this->recentLedger);
+
+        $printUrl = route('reception.doctor-share-payout-receipt', ['ledger' => $newLedgerId], absolute: true);
+        $this->js('setTimeout(function(){ window.open('.Js::from($printUrl).', "_blank", "noopener,noreferrer"); }, 100)');
     }
 }; ?>
 
@@ -457,14 +465,26 @@ new #[Title('Doctor share out')] class extends Component
                         <flux:heading size="md" class="mb-3">{{ __('Recent payouts (this doctor)') }}</flux:heading>
                         <ul class="space-y-2 text-sm">
                             @foreach ($this->recentLedger as $entry)
-                                <li wire:key="led-{{ $entry->id }}" class="flex flex-wrap items-baseline justify-between gap-2 border-b border-zinc-200/80 pb-2 last:border-0 dark:border-zinc-700">
+                                <li wire:key="led-{{ $entry->id }}" class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200/80 pb-2 last:border-0 dark:border-zinc-700">
                                     <flux:text class="text-zinc-600 dark:text-zinc-400">
                                         {{ $entry->paid_at->timezone(config('app.timezone'))->format('M j, Y g:i A') }}
                                         @if ($entry->paidBy)
                                             <span class="text-zinc-500">· {{ $entry->paidBy->name }}</span>
                                         @endif
                                     </flux:text>
-                                    <flux:text class="tabular-nums font-medium text-zinc-900 dark:text-white">{{ $this->formatMoney((int) $entry->total_share) }}</flux:text>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <flux:text class="tabular-nums font-medium text-zinc-900 dark:text-white">{{ $this->formatMoney((int) $entry->total_share) }}</flux:text>
+                                        <flux:button
+                                            href="{{ route('reception.doctor-share-payout-receipt', $entry) }}"
+                                            variant="ghost"
+                                            size="sm"
+                                            icon="printer"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            {{ __('Receipt') }}
+                                        </flux:button>
+                                    </div>
                                 </li>
                             @endforeach
                         </ul>

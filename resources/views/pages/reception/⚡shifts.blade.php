@@ -4,6 +4,7 @@ use App\Enums\QueueResetType;
 use App\Enums\QueueStatus;
 use App\Enums\ShiftStatus;
 use App\Enums\UserRole;
+use App\Models\DoctorShareLedger;
 use App\Models\Queue;
 use App\Models\Shift;
 use App\Models\ShiftExpense;
@@ -51,6 +52,18 @@ new #[Title('Shift')] class extends Component
             ->orderByDesc('closed_at')
             ->limit(8)
             ->get();
+    }
+
+    #[Computed]
+    public function todaysDoctorPayoutTotal(): int
+    {
+        return DoctorShareLedger::totalPaidToday();
+    }
+
+    #[Computed]
+    public function todaysDoctorPayoutByDoctor(): \Illuminate\Support\Collection
+    {
+        return DoctorShareLedger::sumsByDoctorPaidToday();
     }
 
     public function openShift(): void
@@ -229,6 +242,12 @@ new #[Title('Shift')] class extends Component
         </div>
     </header>
 
+    @include('partials.shifts-todays-doctor-payout', [
+        'total' => $this->todaysDoctorPayoutTotal,
+        'breakdown' => $this->todaysDoctorPayoutByDoctor,
+        'showShareOutLink' => true,
+    ])
+
     <flux:error name="shift" />
 
     @if ($this->activeShift)
@@ -317,6 +336,15 @@ new #[Title('Shift')] class extends Component
                 </div>
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    <flux:button
+                        :href="route('reception.shift-close-summary', $s)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="outline"
+                        icon="printer"
+                    >
+                        {{ __('Print summary') }}
+                    </flux:button>
                     <flux:button variant="danger" icon="lock-closed" wire:click="confirmCloseModal" wire:loading.attr="disabled">
                         {{ __('Log & close shift') }}
                     </flux:button>
@@ -355,7 +383,19 @@ new #[Title('Shift')] class extends Component
                                     <flux:text class="font-medium text-zinc-800 dark:text-zinc-200">{{ $closed->opener?->name }}</flux:text>
                                     <flux:text class="text-xs text-zinc-500">{{ $closed->closed_at?->timezone(config('app.timezone'))->format('M j, Y g:i A') }}</flux:text>
                                 </div>
-                                <flux:badge color="zinc">{{ __('Closed') }}</flux:badge>
+                                <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                                    <flux:button
+                                        :href="route('reception.shift-close-summary', $closed)"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        size="sm"
+                                        variant="outline"
+                                        icon="printer"
+                                    >
+                                        {{ __('Print') }}
+                                    </flux:button>
+                                    <flux:badge color="zinc">{{ __('Closed') }}</flux:badge>
+                                </div>
                             </li>
                         @endforeach
                     </ul>
@@ -382,6 +422,18 @@ new #[Title('Shift')] class extends Component
                 </ul>
             @endif
             <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                @if ($this->activeShift)
+                    <flux:button
+                        :href="route('reception.shift-close-summary', $this->activeShift)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="outline"
+                        icon="printer"
+                        class="sm:me-auto"
+                    >
+                        {{ __('Print summary') }}
+                    </flux:button>
+                @endif
                 <flux:button variant="ghost" wire:click="$set('showCloseModal', false)">{{ __('Cancel') }}</flux:button>
                 <flux:button variant="danger" wire:click="closeShift" wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="closeShift">{{ __('Confirm close') }}</span>

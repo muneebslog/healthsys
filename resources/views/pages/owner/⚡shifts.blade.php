@@ -2,6 +2,7 @@
 
 use App\Enums\ShiftStatus;
 use App\Enums\UserRole;
+use App\Models\DoctorShareLedger;
 use App\Models\Shift;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -41,6 +42,18 @@ new #[Title('Shifts')] class extends Component
             ->paginate(12);
     }
 
+    #[Computed]
+    public function todaysDoctorPayoutTotal(): int
+    {
+        return DoctorShareLedger::totalPaidToday();
+    }
+
+    #[Computed]
+    public function todaysDoctorPayoutByDoctor(): \Illuminate\Support\Collection
+    {
+        return DoctorShareLedger::sumsByDoctorPaidToday();
+    }
+
     protected function formatMoney(int $amount): string
     {
         return number_format($amount);
@@ -66,6 +79,12 @@ new #[Title('Shifts')] class extends Component
             @endif
         </div>
     </header>
+
+    @include('partials.shifts-todays-doctor-payout', [
+        'total' => $this->todaysDoctorPayoutTotal,
+        'breakdown' => $this->todaysDoctorPayoutByDoctor,
+        'showShareOutLink' => false,
+    ])
 
     @if ($this->activeShift)
         @php($s = $this->activeShift)
