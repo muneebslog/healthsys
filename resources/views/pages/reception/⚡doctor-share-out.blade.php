@@ -128,6 +128,41 @@ new #[Title('Doctor share out')] class extends Component
         return (int) $this->unpaidLines->sum('doctor_share_amount');
     }
 
+    /**
+     * Active doctors with unpaid doctor share on invoices dated today (clinic date).
+     *
+     * @return \Illuminate\Support\Collection<int, object{doctor_id: int, doctor_name: string, pending_total: int, line_count: int}>
+     */
+    #[Computed]
+    public function doctorsPendingShareToday()
+    {
+        $today = now()->toDateString();
+
+        return InvoiceService::query()
+            ->unpaidDoctorShare()
+            ->join('invoices', 'invoices.id', '=', 'invoice_services.invoice_id')
+            ->join('doctors', 'doctors.id', '=', 'invoice_services.doctor_id')
+            ->whereDate('invoices.created_at', '>=', $today)
+            ->whereDate('invoices.created_at', '<=', $today)
+            ->groupBy('invoice_services.doctor_id', 'doctors.name')
+            ->orderBy('doctors.name')
+            ->select([
+                'invoice_services.doctor_id',
+                'doctors.name as doctor_name',
+                DB::raw('SUM(invoice_services.doctor_share_amount) as pending_total'),
+                DB::raw('COUNT(*) as line_count'),
+            ])
+            ->get()
+            ->map(function ($row) {
+                return (object) [
+                    'doctor_id' => (int) $row->doctor_id,
+                    'doctor_name' => (string) $row->doctor_name,
+                    'pending_total' => (int) $row->pending_total,
+                    'line_count' => (int) $row->line_count,
+                ];
+            });
+    }
+
     #[Computed]
     public function recentLedger()
     {
@@ -296,7 +331,7 @@ new #[Title('Doctor share out')] class extends Component
 
         $this->showPayModal = false;
         $this->payNotes = '';
-        unset($this->unpaidLines, $this->summaryByService, $this->grandTotal, $this->recentLedger);
+        unset($this->unpaidLines, $this->summaryByService, $this->grandTotal, $this->recentLedger, $this->doctorsPendingShareToday);
 
         $printUrl = route('reception.doctor-share-payout-receipt', ['ledger' => $newLedgerId], absolute: true);
         $this->js('setTimeout(function(){ window.open('.Js::from($printUrl).', "_blank", "noopener,noreferrer"); }, 100)');
@@ -519,6 +554,50 @@ new #[Title('Doctor share out')] class extends Component
             </div>
         </div>
     @endif
+
+    <section class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:heading size="lg" class="mb-2">{{ __('Today — pending payout by doctor') }}</flux:heading>
+        <flux:text class="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
+            {{ __('Doctors who still have unpaid share logged on today’s invoices. Select a row to open that doctor above.') }}
+        </flux:text>
+
+        @if ($this->doctorsPendingShareToday->isEmpty())
+            <flux:card class="border-zinc-200 dark:border-zinc-700">
+                <flux:text class="text-zinc-500">{{ __('No pending doctor share for today.') }}</flux:text>
+            </flux:card>
+        @else
+            <div class="overflow-x-auto rounded-2xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+                <table class="min-w-full divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
+                    <thead class="bg-zinc-50/80 dark:bg-zinc-800/50">
+                        <tr>
+                            <th class="px-4 py-3 text-start font-medium text-zinc-600 dark:text-zinc-400">{{ __('Doctor') }}</th>
+                            <th class="px-4 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Lines') }}</th>
+                            <th class="px-4 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Pending total') }}</th>
+                            <th class="px-4 py-3 text-end font-medium text-zinc-600 dark:text-zinc-400">{{ __('Action') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @foreach ($this->doctorsPendingShareToday as $row)
+                            <tr wire:key="pending-today-{{ $row->doctor_id }}">
+                                <td class="px-4 py-3 font-medium text-zinc-900 dark:text-white">{{ $row->doctor_name }}</td>
+                                <td class="px-4 py-3 text-end tabular-nums text-zinc-600 dark:text-zinc-400">{{ $row->line_count }}</td>
+                                <td class="px-4 py-3 text-end tabular-nums font-medium text-amber-800 dark:text-amber-300">{{ $this->formatMoney($row->pending_total) }}</td>
+                                <td class="px-4 py-3 text-end">
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        wire:click="$set('doctorId', '{{ $row->doctor_id }}')"
+                                    >
+                                        {{ __('Select') }}
+                                    </flux:button>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </section>
 
     <flux:modal wire:model="showPayModal" name="confirm-doc-payout" class="min-w-[22rem] max-w-lg">
         <div class="space-y-4">
