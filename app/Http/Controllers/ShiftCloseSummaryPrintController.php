@@ -30,6 +30,7 @@ class ShiftCloseSummaryPrintController extends Controller
         $openingBalance = (int) $shift->opening_balance;
         $totalOpdInvoicesPaid = $shift->totalPaidInvoicesForKind(InvoiceKind::Opd);
         $totalLabInvoicesPaid = $shift->totalPaidInvoicesForKind(InvoiceKind::Lab);
+        $totalProcedureInvoicesPaid = $shift->totalPaidInvoicesForKind(InvoiceKind::Procedure);
         $totalInvoices = $shift->totalInvoices();
         $totalDoctorPayouts = $shift->totalDoctorPayouts();
         $totalExpenses = $shift->totalExpenses();
@@ -43,6 +44,7 @@ class ShiftCloseSummaryPrintController extends Controller
             'openingBalance' => $openingBalance,
             'totalOpdInvoicesPaid' => $totalOpdInvoicesPaid,
             'totalLabInvoicesPaid' => $totalLabInvoicesPaid,
+            'totalProcedureInvoicesPaid' => $totalProcedureInvoicesPaid,
             'totalInvoices' => $totalInvoices,
             'totalDoctorPayouts' => $totalDoctorPayouts,
             'totalExpenses' => $totalExpenses,

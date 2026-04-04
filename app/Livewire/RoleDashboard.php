@@ -121,6 +121,13 @@ class RoleDashboard extends Component
                         'href' => route('doctor.queue'),
                         'enabled' => $doctorEnabled,
                     ],
+                    [
+                        'key' => 'doctor.processes',
+                        'label' => __('Processes'),
+                        'description' => __('Your procedures and payment status by date range.'),
+                        'href' => route('doctor.processes'),
+                        'enabled' => $doctorEnabled,
+                    ],
                 ],
             ],
             [

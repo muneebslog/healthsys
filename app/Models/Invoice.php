@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Invoice extends Model
 {
     protected $fillable = [
-        'visit_id', 'patient_id', 'shift_id', 'kind', 'total_amount', 'discount', 'discount_percent', 'final_amount', 'status',
+        'visit_id', 'patient_id', 'shift_id', 'procedure_id', 'kind', 'total_amount', 'discount', 'discount_percent', 'final_amount', 'status', 'payment_note',
     ];
 
     protected function casts(): array
@@ -35,6 +35,11 @@ class Invoice extends Model
     public function shift(): BelongsTo
     {
         return $this->belongsTo(Shift::class);
+    }
+
+    public function procedure(): BelongsTo
+    {
+        return $this->belongsTo(Procedure::class);
     }
 
     public function services(): HasMany

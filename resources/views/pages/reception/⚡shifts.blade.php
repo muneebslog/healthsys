@@ -296,7 +296,7 @@ new #[Title('Shift')] class extends Component
 
             <section class="lg:col-span-3 space-y-6">
                 <flux:heading size="lg">{{ __('Live summary') }}</flux:heading>
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
                         <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('OPD invoices (paid)') }}</flux:text>
                         <p class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">{{ $this->formatMoney($s->totalPaidInvoicesForKind(InvoiceKind::Opd)) }}</p>
@@ -306,6 +306,10 @@ new #[Title('Shift')] class extends Component
                         <p class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">{{ $this->formatMoney($s->totalPaidInvoicesForKind(InvoiceKind::Lab)) }}</p>
                     </div>
                     <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+                        <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Procedure invoices (paid)') }}</flux:text>
+                        <p class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">{{ $this->formatMoney($s->totalPaidInvoicesForKind(InvoiceKind::Procedure)) }}</p>
+                    </div>
+                    <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
                         <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Doctor shares (accrued)') }}</flux:text>
                         <p class="mt-2 text-2xl font-semibold tabular-nums text-amber-800 dark:text-amber-400">{{ $this->formatMoney($s->totalDoctorPayouts()) }}</p>
                     </div>
@@ -313,7 +317,7 @@ new #[Title('Shift')] class extends Component
                         <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Expenses') }}</flux:text>
                         <p class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">{{ $this->formatMoney($s->totalExpenses()) }}</p>
                     </div>
-                    <div class="rounded-xl border border-emerald-200 bg-emerald-50/80 p-5 sm:col-span-2 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+                    <div class="rounded-xl border border-emerald-200 bg-emerald-50/80 p-5 sm:col-span-2 lg:col-span-3 dark:border-emerald-900/50 dark:bg-emerald-950/30">
                         <flux:text class="text-xs font-medium uppercase tracking-wide text-emerald-800 dark:text-emerald-300">{{ __('Net (preview)') }}</flux:text>
                         <p class="mt-2 text-2xl font-bold tabular-nums text-emerald-900 dark:text-emerald-200">{{ $this->formatMoney($s->netAmount()) }}</p>
                     </div>
@@ -421,6 +425,7 @@ new #[Title('Shift')] class extends Component
                     <li class="flex justify-between"><span class="text-zinc-500">{{ __('Opening') }}</span><span class="tabular-nums font-medium">{{ $this->formatMoney((int) $c->opening_balance) }}</span></li>
                     <li class="flex justify-between"><span class="text-zinc-500">{{ __('OPD invoices') }}</span><span class="tabular-nums font-medium">{{ $this->formatMoney($c->totalPaidInvoicesForKind(InvoiceKind::Opd)) }}</span></li>
                     <li class="flex justify-between"><span class="text-zinc-500">{{ __('Lab invoices') }}</span><span class="tabular-nums font-medium">{{ $this->formatMoney($c->totalPaidInvoicesForKind(InvoiceKind::Lab)) }}</span></li>
+                    <li class="flex justify-between"><span class="text-zinc-500">{{ __('Procedure invoices') }}</span><span class="tabular-nums font-medium">{{ $this->formatMoney($c->totalPaidInvoicesForKind(InvoiceKind::Procedure)) }}</span></li>
                     <li class="flex justify-between"><span class="text-zinc-500">{{ __('Doctor shares') }}</span><span class="tabular-nums font-medium">{{ $this->formatMoney($c->totalDoctorPayouts()) }}</span></li>
                     <li class="flex justify-between"><span class="text-zinc-500">{{ __('Expenses') }}</span><span class="tabular-nums font-medium">{{ $this->formatMoney($c->totalExpenses()) }}</span></li>
                     <flux:separator />

@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Database\Factories\DoctorFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,6 +12,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Doctor extends Model
 {
+    /** @use HasFactory<DoctorFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'name', 'specialization', 'phone', 'start_time', 'end_time',
         'status', 'is_on_payroll', 'first_five_slips_full_share', 'user_id',
@@ -63,5 +68,10 @@ class Doctor extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function procedures(): HasMany
+    {
+        return $this->hasMany(Procedure::class);
     }
 }

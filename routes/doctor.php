@@ -7,4 +7,5 @@ Route::middleware(['auth', 'verified'])->prefix('doctor')->name('doctor.')->grou
     Route::livewire('profile', 'pages::doctor.profile')->name('profile');
     Route::livewire('payouts', 'pages::doctor.payouts')->name('payouts');
     Route::livewire('queue', 'pages::doctor.queue-today')->name('queue');
+    Route::livewire('processes', 'pages::doctor.processes')->name('processes');
 });

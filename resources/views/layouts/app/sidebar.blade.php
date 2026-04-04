@@ -28,6 +28,9 @@
                         <flux:sidebar.item icon="clipboard-document-list" :href="route('reception.lab')" :current="request()->routeIs('reception.lab')" wire:navigate>
                             {{ __('Lab checkout') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="rectangle-stack" :href="route('reception.procedures')" :current="request()->routeIs('reception.procedures') || request()->routeIs('reception.procedures.show')" wire:navigate>
+                            {{ __('Procedures') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="calendar-days" :href="route('reception.appointments')" :current="request()->routeIs('reception.appointments')" wire:navigate>
                             {{ __('Appointments') }}
                         </flux:sidebar.item>
@@ -102,6 +105,9 @@
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="numbered-list" :href="route('doctor.queue')" :current="request()->routeIs('doctor.queue')" wire:navigate>
                             {{ __('Today’s queue') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="rectangle-stack" :href="route('doctor.processes')" :current="request()->routeIs('doctor.processes')" wire:navigate>
+                            {{ __('Processes') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif

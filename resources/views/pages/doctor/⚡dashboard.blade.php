@@ -71,7 +71,7 @@ new #[Title('Doctor home')] class extends Component
         </div>
     </header>
 
-    <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <a
             href="{{ route('doctor.payouts') }}"
             wire:navigate
@@ -109,6 +109,19 @@ new #[Title('Doctor home')] class extends Component
                 {{ $doctor->specialization ?: __('Your services & hours') }}
             </flux:heading>
             <flux:text class="mt-3 text-sm text-teal-700/90 dark:text-teal-300/90">{{ __('View profile →') }}</flux:text>
+        </a>
+
+        <a
+            href="{{ route('doctor.processes') }}"
+            wire:navigate
+            class="group relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs transition hover:border-cyan-300/80 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-cyan-600/50"
+        >
+            <div class="pointer-events-none absolute -end-6 -top-6 size-24 rounded-full bg-cyan-400/5 blur-2xl transition group-hover:bg-cyan-400/10"></div>
+            <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Processes') }}</flux:text>
+            <flux:heading size="lg" class="mt-2 text-zinc-900 dark:text-white">
+                {{ __('OT & procedures') }}
+            </flux:heading>
+            <flux:text class="mt-3 text-sm text-cyan-800/90 dark:text-cyan-300/90">{{ __('View by week or date range →') }}</flux:text>
         </a>
     </div>
 

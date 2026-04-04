@@ -82,7 +82,7 @@ new #[Title('Shift')] class extends Component
         </dl>
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Opening balance') }}</flux:text>
             <p class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">{{ $this->formatMoney((int) $s->opening_balance) }}</p>
@@ -96,10 +96,14 @@ new #[Title('Shift')] class extends Component
             <p class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">{{ $this->formatMoney($s->totalPaidInvoicesForKind(InvoiceKind::Lab)) }}</p>
         </div>
         <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+            <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Procedure invoices (paid)') }}</flux:text>
+            <p class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">{{ $this->formatMoney($s->totalPaidInvoicesForKind(InvoiceKind::Procedure)) }}</p>
+        </div>
+        <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Doctor payouts (reception)') }}</flux:text>
             <p class="mt-2 text-2xl font-semibold tabular-nums text-amber-800 dark:text-amber-400">{{ $this->formatMoney($s->totalDoctorPayouts()) }}</p>
         </div>
-        <div class="rounded-xl border border-zinc-200 bg-white p-5 sm:col-span-2 dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Expenses') }}</flux:text>
             <p class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">{{ $this->formatMoney($s->totalExpenses()) }}</p>
         </div>
@@ -109,7 +113,7 @@ new #[Title('Shift')] class extends Component
         <flux:text class="text-xs font-medium uppercase tracking-wide text-amber-900 dark:text-amber-200">{{ __('Net') }}</flux:text>
         <p class="mt-2 text-3xl font-bold tabular-nums text-amber-950 dark:text-amber-50">{{ $this->formatMoney($s->netAmount()) }}</p>
         <flux:text class="mt-2 text-sm text-amber-900/80 dark:text-amber-200/90">
-            {{ __('Opening + OPD & lab paid invoices − doctor payouts (reception) − expenses') }}
+            {{ __('Opening + OPD, lab & procedure paid invoices − doctor payouts (reception) − expenses') }}
         </flux:text>
     </div>
 

@@ -143,6 +143,10 @@
             <span class="lbl">{{ __('Lab invoices (paid)') }}</span>
             <span class="num">{{ number_format($totalLabInvoicesPaid) }}</span>
         </div>
+        <div class="row">
+            <span class="lbl">{{ __('Procedure invoices (paid)') }}</span>
+            <span class="num">{{ number_format($totalProcedureInvoicesPaid) }}</span>
+        </div>
         <div class="row emph">
             <span class="lbl">{{ __('Total invoices (paid)') }}</span>
             <span class="num">{{ number_format($totalInvoices) }}</span>

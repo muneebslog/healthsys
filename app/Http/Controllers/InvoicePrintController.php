@@ -20,7 +20,7 @@ class InvoicePrintController extends Controller
             }
         }
 
-        $invoice->load(['patient.family', 'services.service', 'services.doctor', 'labTests']);
+        $invoice->load(['patient.family', 'services.service', 'services.doctor', 'labTests', 'procedure.doctor']);
 
         if ($invoice->kind === InvoiceKind::Lab) {
             $rows = $invoice->labTests->sortBy('id')->values()->map(function ($line, int $idx) {
@@ -36,6 +36,25 @@ class InvoicePrintController extends Controller
             });
 
             $discountAmount = (int) $invoice->discount;
+            $showRxHandwritingBlock = false;
+        } elseif ($invoice->kind === InvoiceKind::Procedure) {
+            $proc = $invoice->procedure;
+            $line = __('Procedure payment');
+            if ($proc !== null) {
+                $line .= ' — '.$proc->operation_name.' · '.__('Ref').' '.$proc->reference_number;
+            }
+
+            $rows = collect([
+                [
+                    'service' => $line,
+                    'doctor' => $proc?->doctor?->name ?? '—',
+                    'price' => (int) $invoice->final_amount,
+                    'token_number' => null,
+                    'token_prefix' => 'A',
+                ],
+            ]);
+
+            $discountAmount = 0;
             $showRxHandwritingBlock = false;
         } else {
             $visitServices = VisitService::query()
@@ -77,6 +96,7 @@ class InvoicePrintController extends Controller
             'discountAmount' => $discountAmount,
             'showRxHandwritingBlock' => $showRxHandwritingBlock,
             'isLabInvoice' => $invoice->kind === InvoiceKind::Lab,
+            'isProcedureInvoice' => $invoice->kind === InvoiceKind::Procedure,
         ]);
     }
 }

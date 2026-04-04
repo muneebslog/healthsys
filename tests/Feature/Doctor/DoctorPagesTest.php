@@ -38,4 +38,5 @@ test('doctor user with linked profile can open doctor pages', function () {
     $this->actingAs($user)->get(route('doctor.profile'))->assertOk();
     $this->actingAs($user)->get(route('doctor.payouts'))->assertOk();
     $this->actingAs($user)->get(route('doctor.queue'))->assertOk();
+    $this->actingAs($user)->get(route('doctor.processes'))->assertOk();
 });

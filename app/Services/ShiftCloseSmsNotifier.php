@@ -93,6 +93,7 @@ class ShiftCloseSmsNotifier
         $opening = (int) $shift->opening_balance;
         $opdSales = $shift->totalPaidInvoicesForKind(InvoiceKind::Opd);
         $labSales = $shift->totalPaidInvoicesForKind(InvoiceKind::Lab);
+        $procSales = $shift->totalPaidInvoicesForKind(InvoiceKind::Procedure);
         $doc = $shift->totalDoctorPayouts();
         $exp = $shift->totalExpenses();
         $net = $shift->netAmount();
@@ -102,6 +103,6 @@ class ShiftCloseSmsNotifier
 
         $fmt = static fn (int $n): string => number_format($n);
 
-        return "{$clinic} Shift #{$shift->id} closed. Open {$fmt($opening)}, OPD {$fmt($opdSales)}, Lab {$fmt($labSales)}, Doc {$fmt($doc)}, Exp {$fmt($exp)}, Net {$fmt($net)}. Opened {$open} by {$opener}. Closed {$close} by {$closer}.";
+        return "{$clinic} Shift #{$shift->id} closed. Open {$fmt($opening)}, OPD {$fmt($opdSales)}, Lab {$fmt($labSales)}, Proc {$fmt($procSales)}, Doc {$fmt($doc)}, Exp {$fmt($exp)}, Net {$fmt($net)}. Opened {$open} by {$opener}. Closed {$close} by {$closer}.";
     }
 }

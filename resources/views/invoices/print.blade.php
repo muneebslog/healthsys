@@ -207,7 +207,15 @@
         <thead>
             <tr>
                 <th class="num">{{ __('Token') }}</th>
-                <th>{{ ($isLabInvoice ?? false) ? __('Test') : __('Service') }}</th>
+                <th>
+                    @if ($isLabInvoice ?? false)
+                        {{ __('Test') }}
+                    @elseif ($isProcedureInvoice ?? false)
+                        {{ __('Procedure') }}
+                    @else
+                        {{ __('Service') }}
+                    @endif
+                </th>
                 <th class="doc">{{ ($isLabInvoice ?? false) ? __('Source') : __('Doctor') }}</th>
                 <th class="num">{{ __('Price') }}</th>
             </tr>
