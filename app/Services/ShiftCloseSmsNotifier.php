@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceKind;
 use App\Models\Shift;
 use Illuminate\Support\Facades\Log;
 
@@ -90,7 +91,8 @@ class ShiftCloseSmsNotifier
         $close = $shift->closed_at->timezone($tz)->format('d M Y H:i');
 
         $opening = (int) $shift->opening_balance;
-        $sales = $shift->totalInvoices();
+        $opdSales = $shift->totalPaidInvoicesForKind(InvoiceKind::Opd);
+        $labSales = $shift->totalPaidInvoicesForKind(InvoiceKind::Lab);
         $doc = $shift->totalDoctorPayouts();
         $exp = $shift->totalExpenses();
         $net = $shift->netAmount();
@@ -100,6 +102,6 @@ class ShiftCloseSmsNotifier
 
         $fmt = static fn (int $n): string => number_format($n);
 
-        return "{$clinic} Shift #{$shift->id} closed. Open {$fmt($opening)}, Sales {$fmt($sales)}, Doc {$fmt($doc)}, Exp {$fmt($exp)}, Net {$fmt($net)}. Opened {$open} by {$opener}. Closed {$close} by {$closer}.";
+        return "{$clinic} Shift #{$shift->id} closed. Open {$fmt($opening)}, OPD {$fmt($opdSales)}, Lab {$fmt($labSales)}, Doc {$fmt($doc)}, Exp {$fmt($exp)}, Net {$fmt($net)}. Opened {$open} by {$opener}. Closed {$close} by {$closer}.";
     }
 }

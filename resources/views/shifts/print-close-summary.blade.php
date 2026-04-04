@@ -136,6 +136,14 @@
             <span class="num">{{ number_format($openingBalance) }}</span>
         </div>
         <div class="row">
+            <span class="lbl">{{ __('OPD invoices (paid)') }}</span>
+            <span class="num">{{ number_format($totalOpdInvoicesPaid) }}</span>
+        </div>
+        <div class="row">
+            <span class="lbl">{{ __('Lab invoices (paid)') }}</span>
+            <span class="num">{{ number_format($totalLabInvoicesPaid) }}</span>
+        </div>
+        <div class="row emph">
             <span class="lbl">{{ __('Total invoices (paid)') }}</span>
             <span class="num">{{ number_format($totalInvoices) }}</span>
         </div>

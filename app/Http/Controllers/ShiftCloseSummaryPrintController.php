@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceKind;
 use App\Enums\UserRole;
 use App\Models\Shift;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +28,8 @@ class ShiftCloseSummaryPrintController extends Controller
         ]);
 
         $openingBalance = (int) $shift->opening_balance;
+        $totalOpdInvoicesPaid = $shift->totalPaidInvoicesForKind(InvoiceKind::Opd);
+        $totalLabInvoicesPaid = $shift->totalPaidInvoicesForKind(InvoiceKind::Lab);
         $totalInvoices = $shift->totalInvoices();
         $totalDoctorPayouts = $shift->totalDoctorPayouts();
         $totalExpenses = $shift->totalExpenses();
@@ -38,6 +41,8 @@ class ShiftCloseSummaryPrintController extends Controller
             'shift' => $shift,
             'tz' => $tz,
             'openingBalance' => $openingBalance,
+            'totalOpdInvoicesPaid' => $totalOpdInvoicesPaid,
+            'totalLabInvoicesPaid' => $totalLabInvoicesPaid,
             'totalInvoices' => $totalInvoices,
             'totalDoctorPayouts' => $totalDoctorPayouts,
             'totalExpenses' => $totalExpenses,

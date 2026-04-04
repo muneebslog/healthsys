@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceKind;
 use App\Enums\UserRole;
 use App\Models\DoctorShareLedger;
 use App\Models\Invoice;
@@ -136,7 +137,7 @@ class FinanceExportController extends Controller
 
         return response()->streamDownload(function () use ($from, $to): void {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['id', 'status', 'opened_by', 'closed_by', 'opening_balance', 'opened_at', 'closed_at', 'invoices_paid_total', 'expenses_total', 'doctor_payouts_total', 'net']);
+            fputcsv($out, ['id', 'status', 'opened_by', 'closed_by', 'opening_balance', 'opened_at', 'closed_at', 'invoices_paid_opd', 'invoices_paid_lab', 'invoices_paid_total', 'expenses_total', 'doctor_payouts_total', 'net']);
 
             Shift::query()
                 ->where(function ($q) use ($from, $to): void {
@@ -158,6 +159,8 @@ class FinanceExportController extends Controller
                             $s->opening_balance,
                             $s->opened_at?->toIso8601String(),
                             $s->closed_at?->toIso8601String(),
+                            $s->totalPaidInvoicesForKind(InvoiceKind::Opd),
+                            $s->totalPaidInvoicesForKind(InvoiceKind::Lab),
                             $s->totalInvoices(),
                             $s->totalExpenses(),
                             $s->totalDoctorPayouts(),

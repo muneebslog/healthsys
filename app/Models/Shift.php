@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\InvoiceKind;
 use App\Enums\InvoiceStatus;
 use App\Enums\ShiftStatus;
 use App\Enums\UserRole;
@@ -62,6 +63,14 @@ class Shift extends Model
     public function totalInvoices(): int
     {
         return (int) $this->invoices()->where('status', InvoiceStatus::Paid)->sum('final_amount');
+    }
+
+    public function totalPaidInvoicesForKind(InvoiceKind $kind): int
+    {
+        return (int) $this->invoices()
+            ->where('status', InvoiceStatus::Paid)
+            ->where('kind', $kind)
+            ->sum('final_amount');
     }
 
     public function totalExpenses(): int
