@@ -210,3 +210,170 @@ test('countSlipsTodayForDoctor only counts same calendar day', function () {
 
     expect(DoctorShareCalculator::countSlipsTodayForDoctor($doctor->id))->toBe(1);
 });
+
+test('slip index orders by invoice time then id then line id', function () {
+    $staff = User::factory()->create(['role' => UserRole::Staff]);
+
+    $doctor = Doctor::query()->create([
+        'name' => 'Dr Slip',
+        'specialization' => null,
+        'phone' => null,
+        'status' => 'active',
+        'is_on_payroll' => false,
+        'first_five_slips_full_share' => false,
+        'user_id' => null,
+    ]);
+
+    $family = Family::query()->create(['phone' => '03001112244']);
+    $patient = Patient::query()->create([
+        'family_id' => $family->id,
+        'name' => 'P2',
+        'gender' => 'male',
+        'type' => PatientType::Head,
+        'relation_to_head' => null,
+    ]);
+    $family->update(['head_id' => $patient->id]);
+
+    $service = Service::query()->create([
+        'name' => 'S5',
+        'is_standalone' => false,
+        'reset_type' => QueueResetType::Daily,
+        'is_active' => true,
+    ]);
+
+    $sp = ServicePrice::query()->create([
+        'service_id' => $service->id,
+        'doctor_id' => $doctor->id,
+        'price' => 1000,
+        'doctor_share' => 70,
+        'hospital_share' => 30,
+        'is_active' => true,
+    ]);
+
+    $shift = Shift::query()->create([
+        'opened_by' => $staff->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+
+    $visit = Visit::query()->create([
+        'patient_id' => $patient->id,
+        'family_id' => $family->id,
+        'doctor_id' => $doctor->id,
+        'shift_id' => $shift->id,
+        'status' => VisitStatus::InProgress,
+    ]);
+
+    $invoice = Invoice::query()->create([
+        'visit_id' => $visit->id,
+        'patient_id' => $patient->id,
+        'shift_id' => $shift->id,
+        'total_amount' => 2000,
+        'discount' => 0,
+        'final_amount' => 2000,
+        'status' => InvoiceStatus::Paid,
+    ]);
+
+    $lineA = InvoiceService::query()->create([
+        'invoice_id' => $invoice->id,
+        'service_id' => $service->id,
+        'service_price_id' => $sp->id,
+        'doctor_id' => $doctor->id,
+        'price' => 1000,
+        'doctor_share_amount' => 700,
+        'discount' => 0,
+        'final_amount' => 1000,
+    ]);
+
+    $lineB = InvoiceService::query()->create([
+        'invoice_id' => $invoice->id,
+        'service_id' => $service->id,
+        'service_price_id' => $sp->id,
+        'doctor_id' => $doctor->id,
+        'price' => 1000,
+        'doctor_share_amount' => 700,
+        'discount' => 0,
+        'final_amount' => 1000,
+    ]);
+
+    expect(DoctorShareCalculator::slipIndexOnDoctorCalendarDay($lineA))->toBe(0)
+        ->and(DoctorShareCalculator::slipIndexOnDoctorCalendarDay($lineB))->toBe(1);
+});
+
+test('reconciled share applies first-five rule when stored amount is stale', function () {
+    $doctor = Doctor::query()->create([
+        'name' => 'Dr Reconcile',
+        'specialization' => null,
+        'phone' => null,
+        'status' => 'active',
+        'is_on_payroll' => false,
+        'first_five_slips_full_share' => true,
+        'user_id' => null,
+    ]);
+
+    $service = Service::query()->create([
+        'name' => 'S6',
+        'is_standalone' => false,
+        'reset_type' => QueueResetType::Daily,
+        'is_active' => true,
+    ]);
+
+    $sp = ServicePrice::query()->create([
+        'service_id' => $service->id,
+        'doctor_id' => $doctor->id,
+        'price' => 500,
+        'doctor_share' => 70,
+        'hospital_share' => 30,
+        'is_active' => true,
+    ]);
+
+    $staff = User::factory()->create(['role' => UserRole::Staff]);
+    $shift = Shift::query()->create([
+        'opened_by' => $staff->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+
+    $family = Family::query()->create(['phone' => '03001112255']);
+    $patient = Patient::query()->create([
+        'family_id' => $family->id,
+        'name' => 'P3',
+        'gender' => 'male',
+        'type' => PatientType::Head,
+        'relation_to_head' => null,
+    ]);
+    $family->update(['head_id' => $patient->id]);
+
+    $visit = Visit::query()->create([
+        'patient_id' => $patient->id,
+        'family_id' => $family->id,
+        'doctor_id' => $doctor->id,
+        'shift_id' => $shift->id,
+        'status' => VisitStatus::InProgress,
+    ]);
+
+    $invoice = Invoice::query()->create([
+        'visit_id' => $visit->id,
+        'patient_id' => $patient->id,
+        'shift_id' => $shift->id,
+        'total_amount' => 500,
+        'discount' => 0,
+        'final_amount' => 500,
+        'status' => InvoiceStatus::Paid,
+    ]);
+
+    $line = InvoiceService::query()->create([
+        'invoice_id' => $invoice->id,
+        'service_id' => $service->id,
+        'service_price_id' => $sp->id,
+        'doctor_id' => $doctor->id,
+        'price' => 500,
+        'doctor_share_amount' => 350,
+        'discount' => 0,
+        'final_amount' => 500,
+    ]);
+
+    expect(DoctorShareCalculator::reconciledDoctorShareAmount($line))->toBe(500);
+});

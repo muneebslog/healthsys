@@ -207,8 +207,8 @@
         <thead>
             <tr>
                 <th class="num">{{ __('Token') }}</th>
-                <th>{{ __('Service') }}</th>
-                <th class="doc">{{ __('Doctor') }}</th>
+                <th>{{ ($isLabInvoice ?? false) ? __('Test') : __('Service') }}</th>
+                <th class="doc">{{ ($isLabInvoice ?? false) ? __('Source') : __('Doctor') }}</th>
                 <th class="num">{{ __('Price') }}</th>
             </tr>
         </thead>

@@ -122,6 +122,98 @@ test('staff can log doctor payout and marks invoice lines paid', function () {
     expect($ledger->items()->count())->toBe(1);
 });
 
+test('payout reconciles first-five full share before recording ledger total', function () {
+    $staff = User::factory()->create(['role' => UserRole::Staff]);
+
+    $family = Family::query()->create(['phone' => '03008887766']);
+    $patient = Patient::query()->create([
+        'family_id' => $family->id,
+        'name' => 'Reconcile Patient',
+        'gender' => 'male',
+        'type' => PatientType::Head,
+        'relation_to_head' => null,
+    ]);
+    $family->update(['head_id' => $patient->id]);
+
+    $doctor = Doctor::query()->create([
+        'name' => 'Dr First Five',
+        'specialization' => 'GP',
+        'phone' => null,
+        'status' => 'active',
+        'is_on_payroll' => false,
+        'first_five_slips_full_share' => true,
+        'user_id' => null,
+    ]);
+
+    $service = Service::query()->create([
+        'name' => 'Consult',
+        'is_standalone' => false,
+        'reset_type' => QueueResetType::Daily,
+        'is_active' => true,
+    ]);
+
+    $sp = ServicePrice::query()->create([
+        'service_id' => $service->id,
+        'doctor_id' => $doctor->id,
+        'price' => 500,
+        'doctor_share' => 70,
+        'hospital_share' => 30,
+        'is_active' => true,
+    ]);
+
+    $shift = Shift::query()->create([
+        'opened_by' => $staff->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+
+    $visit = Visit::query()->create([
+        'patient_id' => $patient->id,
+        'family_id' => $family->id,
+        'doctor_id' => $doctor->id,
+        'shift_id' => $shift->id,
+        'status' => VisitStatus::InProgress,
+    ]);
+
+    $invoice = Invoice::query()->create([
+        'visit_id' => $visit->id,
+        'patient_id' => $patient->id,
+        'shift_id' => $shift->id,
+        'total_amount' => 500,
+        'discount' => 0,
+        'final_amount' => 500,
+        'status' => InvoiceStatus::Paid,
+    ]);
+
+    $line = InvoiceService::query()->create([
+        'invoice_id' => $invoice->id,
+        'service_id' => $service->id,
+        'service_price_id' => $sp->id,
+        'doctor_id' => $doctor->id,
+        'price' => 500,
+        'doctor_share_amount' => 350,
+        'discount' => 0,
+        'final_amount' => 500,
+        'doctor_share_paid' => false,
+    ]);
+
+    Livewire::actingAs($staff)
+        ->test('pages::reception.doctor-share-out')
+        ->set('doctorId', (string) $doctor->id)
+        ->set('period', 'today')
+        ->call('confirmPay')
+        ->call('logAndPay')
+        ->assertHasNoErrors();
+
+    expect($line->fresh()->doctor_share_amount)->toBe(500)
+        ->and($line->fresh()->doctor_share_paid)->toBeTrue();
+
+    $ledger = DoctorShareLedger::query()->where('doctor_id', $doctor->id)->first();
+    expect($ledger)->not->toBeNull()
+        ->and((int) $ledger->total_share)->toBe(500);
+});
+
 test('doctor share out page lists all doctors with pending share for today', function () {
     $staff = User::factory()->create(['role' => UserRole::Staff]);
 

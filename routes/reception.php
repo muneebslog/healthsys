@@ -10,6 +10,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('reception/shifts/{shift}/close-summary', ShiftCloseSummaryPrintController::class)
         ->name('reception.shift-close-summary');
     Route::livewire('reception/walk-in', 'pages::reception.walk-in')->name('reception.walk-in');
+    Route::livewire('reception/lab', 'pages::reception.lab')->name('reception.lab');
     Route::livewire('reception/appointments', 'pages::reception.appointments')->name('reception.appointments');
     Route::livewire('reception/doctor-share-out', 'pages::reception.doctor-share-out')->name('reception.doctor-share-out');
     Route::get('reception/doctor-share-ledger/{ledger}/payout-receipt', DoctorSharePayoutReceiptPrintController::class)

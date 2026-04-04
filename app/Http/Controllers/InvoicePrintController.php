@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceKind;
 use App\Enums\UserRole;
 use App\Models\Invoice;
 use App\Models\VisitService;
@@ -19,36 +20,53 @@ class InvoicePrintController extends Controller
             }
         }
 
-        $invoice->load(['patient.family', 'services.service', 'services.doctor']);
+        $invoice->load(['patient.family', 'services.service', 'services.doctor', 'labTests']);
 
-        $visitServices = VisitService::query()
-            ->where('visit_id', $invoice->visit_id)
-            ->orderBy('id')
-            ->with('queueToken')
-            ->get();
+        if ($invoice->kind === InvoiceKind::Lab) {
+            $rows = $invoice->labTests->sortBy('id')->values()->map(function ($line, int $idx) {
+                $label = $line->test_code.' — '.$line->test_name;
 
-        $lines = $invoice->services->sortBy('id')->values();
+                return [
+                    'service' => $label,
+                    'doctor' => __('Lab'),
+                    'price' => (int) $line->line_final_amount,
+                    'token_number' => null,
+                    'token_prefix' => $idx < 26 ? chr(65 + $idx) : 'S'.($idx + 1),
+                ];
+            });
 
-        $rows = $lines->map(function ($is, int $idx) use ($visitServices) {
-            $vs = $visitServices->get($idx);
+            $discountAmount = (int) $invoice->discount;
+            $showRxHandwritingBlock = false;
+        } else {
+            $visitServices = VisitService::query()
+                ->where('visit_id', $invoice->visit_id)
+                ->orderBy('id')
+                ->with('queueToken')
+                ->get();
 
-            return [
-                'service' => $is->service?->name ?? '—',
-                'doctor' => $is->doctor?->name ?? '—',
-                'price' => (int) $is->final_amount,
-                'token_number' => $vs?->queueToken?->token_number,
-                'token_prefix' => $idx < 26 ? chr(65 + $idx) : 'S'.($idx + 1),
-            ];
-        });
+            $lines = $invoice->services->sortBy('id')->values();
 
-        $invoiceLevelDiscount = (int) $invoice->discount;
-        $lineDiscountSum = (int) $invoice->services->sum('discount');
-        $discountAmount = $invoiceLevelDiscount > 0 ? $invoiceLevelDiscount : $lineDiscountSum;
+            $rows = $lines->map(function ($is, int $idx) use ($visitServices) {
+                $vs = $visitServices->get($idx);
 
-        /** @see DatabaseSeeder::seedDefaultServices id 2 = General Checkup — extra slip space for vitals + Rx */
-        $showRxHandwritingBlock = $invoice->services->contains(
-            fn ($is) => (int) $is->service_id === 2
-        );
+                return [
+                    'service' => $is->service?->name ?? '—',
+                    'doctor' => $is->doctor?->name ?? '—',
+                    'price' => (int) $is->final_amount,
+                    'token_number' => $vs?->queueToken?->token_number,
+                    'token_prefix' => $idx < 26 ? chr(65 + $idx) : 'S'.($idx + 1),
+                ];
+            });
+
+            $invoiceLevelDiscount = (int) $invoice->discount;
+            $lineDiscountSum = (int) $invoice->services->sum('discount');
+            $discountAmount = $invoiceLevelDiscount > 0 ? $invoiceLevelDiscount : $lineDiscountSum;
+
+            /** @see DatabaseSeeder::seedDefaultServices id 2 = General Checkup — extra slip space for vitals + Rx */
+            $showRxHandwritingBlock = $invoice->services->contains(
+                fn ($is) => (int) $is->service_id === 2
+            );
+        }
 
         return view('invoices.print', [
             'clinicName' => config('hms.clinic_name', 'MMC'),
@@ -58,6 +76,7 @@ class InvoicePrintController extends Controller
             'showDiscountRow' => $discountAmount > 0,
             'discountAmount' => $discountAmount,
             'showRxHandwritingBlock' => $showRxHandwritingBlock,
+            'isLabInvoice' => $invoice->kind === InvoiceKind::Lab,
         ]);
     }
 }

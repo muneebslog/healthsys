@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Doctor;
 use App\Models\InvoiceService;
 use App\Models\ServicePrice;
+use Illuminate\Support\Carbon;
 
 class DoctorShareCalculator
 {
@@ -18,6 +19,61 @@ class DoctorShareCalculator
             ->where('invoice_services.doctor_id', $doctorId)
             ->whereDate('invoices.created_at', now()->toDateString())
             ->count();
+    }
+
+    /**
+     * 0-based slip index for this line among the doctor’s lines on the invoice’s calendar day.
+     *
+     * Ordering matches checkout: earlier invoice time, then lower invoice id (same timestamp), then lower line id within the invoice.
+     */
+    public static function slipIndexOnDoctorCalendarDay(InvoiceService $is): int
+    {
+        $is->loadMissing('invoice');
+        $invoice = $is->invoice;
+        if (! $invoice || ! $is->doctor_id) {
+            return 0;
+        }
+
+        $invoiceCreatedAt = $invoice->created_at;
+        if (! $invoiceCreatedAt instanceof Carbon) {
+            $invoiceCreatedAt = Carbon::parse($invoiceCreatedAt);
+        }
+
+        $day = $invoiceCreatedAt->toDateString();
+
+        return (int) InvoiceService::query()
+            ->join('invoices', 'invoices.id', '=', 'invoice_services.invoice_id')
+            ->where('invoice_services.doctor_id', $is->doctor_id)
+            ->whereDate('invoices.created_at', $day)
+            ->where(function ($q) use ($invoice, $is, $invoiceCreatedAt): void {
+                $q->where('invoices.created_at', '<', $invoiceCreatedAt)
+                    ->orWhere(function ($inner) use ($invoice, $invoiceCreatedAt): void {
+                        $inner->where('invoices.created_at', $invoiceCreatedAt)
+                            ->where('invoices.id', '<', $invoice->id);
+                    })
+                    ->orWhere(function ($inner) use ($invoice, $is): void {
+                        $inner->where('invoice_services.invoice_id', $invoice->id)
+                            ->where('invoice_services.id', '<', $is->id);
+                    });
+            })
+            ->count();
+    }
+
+    /**
+     * Doctor share for a persisted invoice line using current service price and doctor rules (e.g. first-five full share).
+     */
+    public static function reconciledDoctorShareAmount(InvoiceService $is): int
+    {
+        $is->loadMissing(['invoice', 'servicePrice.doctor']);
+        $sp = $is->servicePrice;
+        if (! $sp || ! $sp->doctor_id) {
+            return (int) $is->doctor_share_amount;
+        }
+
+        $charged = (int) $is->final_amount;
+        $idx = self::slipIndexOnDoctorCalendarDay($is);
+
+        return self::amountForLine($sp, $charged, $idx);
     }
 
     /**

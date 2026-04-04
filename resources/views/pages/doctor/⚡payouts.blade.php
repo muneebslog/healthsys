@@ -4,6 +4,7 @@ use App\Livewire\Concerns\GuardsDoctorAccess;
 use App\Models\Doctor;
 use App\Models\DoctorShareLedger;
 use App\Models\InvoiceService;
+use App\Services\DoctorShareCalculator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -22,7 +23,15 @@ new #[Title('My payouts')] class extends Component
     #[Computed]
     public function unpaidLines()
     {
-        return $this->unpaidShareQuery()->get();
+        return $this->unpaidShareQuery()
+            ->with(['invoice', 'servicePrice.doctor'])
+            ->get()
+            ->each(function (InvoiceService $line): void {
+                $line->setAttribute(
+                    'effective_doctor_share_amount',
+                    DoctorShareCalculator::reconciledDoctorShareAmount($line)
+                );
+            });
     }
 
     #[Computed]
@@ -34,7 +43,7 @@ new #[Title('My payouts')] class extends Component
                 return [
                     'service_name' => $name,
                     'count' => $rows->count(),
-                    'subtotal' => (int) $rows->sum('doctor_share_amount'),
+                    'subtotal' => (int) $rows->sum('effective_doctor_share_amount'),
                 ];
             })
             ->values();
@@ -43,7 +52,7 @@ new #[Title('My payouts')] class extends Component
     #[Computed]
     public function pendingTotal(): int
     {
-        return (int) $this->unpaidLines->sum('doctor_share_amount');
+        return (int) $this->unpaidLines->sum('effective_doctor_share_amount');
     }
 
     #[Computed]
@@ -66,7 +75,9 @@ new #[Title('My payouts')] class extends Component
             ->where('invoice_services.doctor_id', $doctorId)
             ->select([
                 'invoice_services.id',
+                'invoice_services.invoice_id',
                 'invoice_services.service_id',
+                'invoice_services.service_price_id',
                 'invoice_services.price',
                 'invoice_services.doctor_share_amount',
                 'invoice_services.final_amount',
@@ -175,7 +186,7 @@ new #[Title('My payouts')] class extends Component
                                         </td>
                                         <td class="px-3 py-2.5 font-medium text-zinc-900 dark:text-white">{{ $line->patient_name }}</td>
                                         <td class="px-3 py-2.5 text-zinc-600 dark:text-zinc-400">{{ $line->service_name }}</td>
-                                        <td class="whitespace-nowrap px-3 py-2.5 text-end tabular-nums font-medium text-teal-800 dark:text-teal-300">{{ $this->formatMoney((int) $line->doctor_share_amount) }}</td>
+                                        <td class="whitespace-nowrap px-3 py-2.5 text-end tabular-nums font-medium text-teal-800 dark:text-teal-300">{{ $this->formatMoney((int) $line->effective_doctor_share_amount) }}</td>
                                         <td class="whitespace-nowrap px-3 py-2.5 text-end text-zinc-500">
                                             {{ \Illuminate\Support\Carbon::parse($line->invoice_created_at)->timezone(config('app.timezone'))->format('M j, Y') }}
                                         </td>

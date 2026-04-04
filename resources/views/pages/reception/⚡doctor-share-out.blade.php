@@ -5,6 +5,7 @@ use App\Models\Doctor;
 use App\Models\DoctorShareLedger;
 use App\Models\DoctorShareLedgerItem;
 use App\Models\InvoiceService;
+use App\Services\DoctorShareCalculator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Js;
 use Illuminate\Support\Facades\DB;
@@ -102,7 +103,15 @@ new #[Title('Doctor share out')] class extends Component
             return collect();
         }
 
-        return $this->unpaidShareQuery()->get();
+        return $this->unpaidShareQuery()
+            ->with(['invoice', 'servicePrice.doctor'])
+            ->get()
+            ->each(function (InvoiceService $line): void {
+                $line->setAttribute(
+                    'effective_doctor_share_amount',
+                    DoctorShareCalculator::reconciledDoctorShareAmount($line)
+                );
+            });
     }
 
     #[Computed]
@@ -111,7 +120,7 @@ new #[Title('Doctor share out')] class extends Component
         return $this->unpaidLines
             ->groupBy('service_name')
             ->map(function ($rows, $name) {
-                $sum = (int) $rows->sum('doctor_share_amount');
+                $sum = (int) $rows->sum('effective_doctor_share_amount');
 
                 return [
                     'service_name' => $name,
@@ -125,7 +134,7 @@ new #[Title('Doctor share out')] class extends Component
     #[Computed]
     public function grandTotal(): int
     {
-        return (int) $this->unpaidLines->sum('doctor_share_amount');
+        return (int) $this->unpaidLines->sum('effective_doctor_share_amount');
     }
 
     /**
@@ -144,23 +153,25 @@ new #[Title('Doctor share out')] class extends Component
             ->join('doctors', 'doctors.id', '=', 'invoice_services.doctor_id')
             ->whereDate('invoices.created_at', '>=', $today)
             ->whereDate('invoices.created_at', '<=', $today)
-            ->groupBy('invoice_services.doctor_id', 'doctors.name')
+            ->select(['invoice_services.*', 'doctors.name as doctor_name'])
+            ->with(['invoice', 'servicePrice.doctor'])
             ->orderBy('doctors.name')
-            ->select([
-                'invoice_services.doctor_id',
-                'doctors.name as doctor_name',
-                DB::raw('SUM(invoice_services.doctor_share_amount) as pending_total'),
-                DB::raw('COUNT(*) as line_count'),
-            ])
             ->get()
-            ->map(function ($row) {
+            ->groupBy('doctor_id')
+            ->map(function ($lines) {
+                /** @var \Illuminate\Support\Collection<int, InvoiceService> $lines */
+                $first = $lines->first();
+
                 return (object) [
-                    'doctor_id' => (int) $row->doctor_id,
-                    'doctor_name' => (string) $row->doctor_name,
-                    'pending_total' => (int) $row->pending_total,
-                    'line_count' => (int) $row->line_count,
+                    'doctor_id' => (int) $first->doctor_id,
+                    'doctor_name' => (string) $first->doctor_name,
+                    'pending_total' => (int) $lines->sum(fn (InvoiceService $l) => DoctorShareCalculator::reconciledDoctorShareAmount($l)),
+                    'line_count' => $lines->count(),
                 ];
-            });
+            })
+            ->values()
+            ->sortBy('doctor_name')
+            ->values();
     }
 
     #[Computed]
@@ -187,7 +198,9 @@ new #[Title('Doctor share out')] class extends Component
             ->where('invoice_services.doctor_id', $doctorId)
             ->select([
                 'invoice_services.id',
+                'invoice_services.invoice_id',
                 'invoice_services.service_id',
+                'invoice_services.service_price_id',
                 'invoice_services.price',
                 'invoice_services.doctor_share_amount',
                 'invoice_services.final_amount',
@@ -297,7 +310,20 @@ new #[Title('Doctor share out')] class extends Component
                     throw new \RuntimeException('empty');
                 }
 
-                $total = (int) InvoiceService::query()->whereKey($ids)->sum('doctor_share_amount');
+                $lines = InvoiceService::query()
+                    ->whereKey($ids)
+                    ->with(['invoice', 'servicePrice.doctor'])
+                    ->orderBy('id')
+                    ->get();
+
+                $total = 0;
+                foreach ($lines as $line) {
+                    $correct = DoctorShareCalculator::reconciledDoctorShareAmount($line);
+                    if ($correct !== (int) $line->doctor_share_amount) {
+                        $line->update(['doctor_share_amount' => $correct]);
+                    }
+                    $total += $correct;
+                }
 
                 $ledger = DoctorShareLedger::query()->create([
                     'doctor_id' => $doctorId,
@@ -510,7 +536,7 @@ new #[Title('Doctor share out')] class extends Component
                                         <td class="px-3 py-2.5 font-medium text-zinc-900 dark:text-white">{{ $line->patient_name }}</td>
                                         <td class="px-3 py-2.5 text-zinc-600 dark:text-zinc-400">{{ $line->service_name }}</td>
                                         <td class="whitespace-nowrap px-3 py-2.5 text-end tabular-nums text-zinc-700 dark:text-zinc-300">{{ $this->formatMoney((int) $line->final_amount) }}</td>
-                                        <td class="whitespace-nowrap px-3 py-2.5 text-end tabular-nums font-medium text-amber-800 dark:text-amber-300">{{ $this->formatMoney((int) $line->doctor_share_amount) }}</td>
+                                        <td class="whitespace-nowrap px-3 py-2.5 text-end tabular-nums font-medium text-amber-800 dark:text-amber-300">{{ $this->formatMoney((int) $line->effective_doctor_share_amount) }}</td>
                                         <td class="whitespace-nowrap px-3 py-2.5 text-end text-zinc-500 dark:text-zinc-500">
                                             {{ \Illuminate\Support\Carbon::parse($line->invoice_created_at)->timezone(config('app.timezone'))->format('g:i A') }}
                                         </td>

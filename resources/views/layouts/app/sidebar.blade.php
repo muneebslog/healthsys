@@ -25,6 +25,9 @@
                         <flux:sidebar.item icon="ticket" :href="route('reception.walk-in')" :current="request()->routeIs('reception.walk-in')" wire:navigate>
                             {{ __('Walk-in') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="clipboard-document-list" :href="route('reception.lab')" :current="request()->routeIs('reception.lab')" wire:navigate>
+                            {{ __('Lab checkout') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="calendar-days" :href="route('reception.appointments')" :current="request()->routeIs('reception.appointments')" wire:navigate>
                             {{ __('Appointments') }}
                         </flux:sidebar.item>
@@ -107,6 +110,9 @@
                     <flux:sidebar.group :heading="__('Admin')" class="grid">
                         <flux:sidebar.item icon="rectangle-stack" :href="route('admin.services')" :current="request()->routeIs('admin.services')" wire:navigate>
                             {{ __('Services') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="clipboard-document-list" :href="route('admin.lab-tests')" :current="request()->routeIs('admin.lab-tests')" wire:navigate>
+                            {{ __('Lab tests') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="user-group" :href="route('admin.doctors')" :current="request()->routeIs('admin.doctors')" wire:navigate>
                             {{ __('Doctors') }}

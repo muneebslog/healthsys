@@ -651,6 +651,7 @@ new #[Title('Appointments')] class extends Component
                     ->where('service_id', $appointment->service_id)
                     ->where('doctor_id', $appointment->doctor_id)
                     ->where('is_active', true)
+                    ->with('doctor')
                     ->lockForUpdate()
                     ->first();
 
