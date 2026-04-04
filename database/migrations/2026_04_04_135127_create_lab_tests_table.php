@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('lab_tests', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('test_code');
+            $table->string('test_code', 64)->nullable();
             $table->string('sourcing', 32);
             $table->unsignedSmallInteger('days_required')->default(0);
             $table->unsignedInteger('price');

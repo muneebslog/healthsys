@@ -24,7 +24,9 @@ class InvoicePrintController extends Controller
 
         if ($invoice->kind === InvoiceKind::Lab) {
             $rows = $invoice->labTests->sortBy('id')->values()->map(function ($line, int $idx) {
-                $label = $line->test_code.' — '.$line->test_name;
+                $label = filled($line->test_code)
+                    ? $line->test_code.' — '.$line->test_name
+                    : $line->test_name;
 
                 return [
                     'service' => $label,

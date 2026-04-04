@@ -85,7 +85,7 @@ new #[Title('Lab checkout')] class extends Component
     #[Computed]
     public function labTestsCatalog()
     {
-        $q = LabTest::query()->where('is_active', true)->orderBy('test_code');
+        $q = LabTest::query()->where('is_active', true)->orderBy('name');
 
         $term = trim($this->testSearch);
         if ($term !== '') {
@@ -113,7 +113,7 @@ new #[Title('Lab checkout')] class extends Component
             $rows[] = [
                 'index' => $index,
                 'id' => $t->id,
-                'code' => $t->test_code,
+                'code' => $t->test_code ?? '',
                 'name' => $t->name,
                 'price' => (int) $t->price,
             ];
@@ -638,7 +638,7 @@ new #[Title('Lab checkout')] class extends Component
                         <flux:select wire:model.live="pendingTestId" class="min-w-0 flex-1" placeholder="{{ __('Choose test') }}">
                             <flux:select.option value="">{{ __('Choose test') }}</flux:select.option>
                             @foreach ($this->labTestsCatalog as $t)
-                                <flux:select.option value="{{ $t->id }}">{{ $t->test_code }} — {{ $t->name }} ({{ number_format($t->price) }})</flux:select.option>
+                                <flux:select.option value="{{ $t->id }}">{{ $t->test_code ? $t->test_code.' — ' : '' }}{{ $t->name }} ({{ number_format($t->price) }})</flux:select.option>
                             @endforeach
                         </flux:select>
                         <flux:button type="button" variant="primary" icon="plus" wire:click="addPendingTest" :disabled="! $pendingTestId">
@@ -670,7 +670,7 @@ new #[Title('Lab checkout')] class extends Component
                         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                             @foreach ($this->selectedTestsRows as $row)
                                 <tr wire:key="lab-line-{{ $row['index'] }}-{{ $row['id'] }}">
-                                    <td class="px-4 py-3 font-mono text-xs text-zinc-600 dark:text-zinc-400">{{ $row['code'] }}</td>
+                                    <td class="px-4 py-3 font-mono text-xs text-zinc-600 dark:text-zinc-400">{{ $row['code'] !== '' ? $row['code'] : '—' }}</td>
                                     <td class="px-4 py-3 text-zinc-800 dark:text-zinc-200">{{ $row['name'] }}</td>
                                     <td class="px-4 py-3 text-end tabular-nums text-zinc-700 dark:text-zinc-300">{{ $this->formatMoney($row['price']) }}</td>
                                     <td class="px-4 py-3 text-end">

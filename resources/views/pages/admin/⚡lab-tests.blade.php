@@ -46,7 +46,7 @@ new #[Title('Lab tests')] class extends Component
     #[Computed]
     public function rows()
     {
-        return LabTest::query()->withCount('invoiceLines')->orderBy('test_code')->get();
+        return LabTest::query()->withCount('invoiceLines')->orderBy('name')->get();
     }
 
     public function openCreate(): void
@@ -69,7 +69,7 @@ new #[Title('Lab tests')] class extends Component
         $t = LabTest::query()->findOrFail($id);
         $this->editingId = $t->id;
         $this->name = $t->name;
-        $this->test_code = $t->test_code;
+        $this->test_code = $t->test_code ?? '';
         $this->sourcing = $t->sourcing->value;
         $this->days_required = (int) $t->days_required;
         $this->price = (int) $t->price;
@@ -85,7 +85,7 @@ new #[Title('Lab tests')] class extends Component
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'test_code' => [
-                'required',
+                'nullable',
                 'string',
                 'max:64',
                 \Illuminate\Validation\Rule::unique('lab_tests', 'test_code')->ignore($this->editingId),
@@ -107,9 +107,12 @@ new #[Title('Lab tests')] class extends Component
             return;
         }
 
+        $code = trim((string) ($validated['test_code'] ?? ''));
+        $normalizedCode = $code === '' ? null : $code;
+
         $payload = [
             'name' => $validated['name'],
-            'test_code' => $validated['test_code'],
+            'test_code' => $normalizedCode,
             'sourcing' => $validated['sourcing'],
             'days_required' => $validated['days_required'],
             'price' => $validated['price'],
@@ -220,7 +223,7 @@ new #[Title('Lab tests')] class extends Component
                     <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                         @foreach ($this->rows as $row)
                             <tr wire:key="lab-{{ $row->id }}" class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
-                                <td class="px-6 py-4 font-mono text-sm text-zinc-700 dark:text-zinc-300">{{ $row->test_code }}</td>
+                                <td class="px-6 py-4 font-mono text-sm text-zinc-700 dark:text-zinc-300">{{ $row->test_code ?: '—' }}</td>
                                 <td class="px-6 py-4 font-medium text-zinc-900 dark:text-white">{{ $row->name }}</td>
                                 <td class="px-6 py-4">
                                     @if ($row->sourcing === \App\Enums\LabTestSourcing::InHouse)
@@ -264,7 +267,7 @@ new #[Title('Lab tests')] class extends Component
             </flux:field>
             <flux:field>
                 <flux:label>{{ __('Test code') }}</flux:label>
-                <flux:input wire:model="test_code" class="font-mono" placeholder="{{ __('e.g. CBC-01') }}" />
+                <flux:input wire:model="test_code" class="font-mono" placeholder="{{ __('Optional — e.g. CBC-01') }}" />
                 <flux:error name="test_code" />
             </flux:field>
             <flux:field>

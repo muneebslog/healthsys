@@ -13,7 +13,7 @@ class LabInvoiceLineAllocator
      * @param  list<LabTest>  $tests  Order preserved; must be non-empty.
      * @return list<array{
      *     lab_test_id: int,
-     *     test_code: string,
+     *     test_code: string|null,
      *     test_name: string,
      *     sourcing: string,
      *     days_required: int,
@@ -69,7 +69,7 @@ class LabInvoiceLineAllocator
 
             $rows[] = [
                 'lab_test_id' => $test->id,
-                'test_code' => $test->test_code,
+                'test_code' => $test->test_code ?? '',
                 'test_name' => $test->name,
                 'sourcing' => $test->sourcing instanceof \BackedEnum ? $test->sourcing->value : (string) $test->sourcing,
                 'days_required' => (int) $test->days_required,
