@@ -1,7 +1,13 @@
 <?php
 
+use App\Enums\QueueResetType;
+use App\Enums\QueueStatus;
+use App\Enums\ShiftStatus;
 use App\Enums\UserRole;
 use App\Models\Doctor;
+use App\Models\Queue;
+use App\Models\Service;
+use App\Models\Shift;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -45,6 +51,30 @@ test('admin can access settings crud pages', function () {
     $this->get(route('admin.users'))->assertOk();
     $this->get(route('admin.lab-api-logs'))->assertOk();
     $this->get(route('admin.queue-insights'))->assertOk();
+
+    $shiftOpener = User::factory()->create();
+    $shift = Shift::create([
+        'opened_by' => $shiftOpener->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+    $service = Service::create([
+        'name' => 'AdminSettingsQueueShow',
+        'is_standalone' => true,
+        'reset_type' => QueueResetType::Daily,
+        'is_active' => true,
+    ]);
+    $queue = Queue::create([
+        'service_id' => $service->id,
+        'doctor_id' => null,
+        'shift_id' => $shift->id,
+        'status' => QueueStatus::Active,
+        'current_token' => 0,
+        'current_flow_token' => 0,
+        'closed_at' => null,
+    ]);
+    $this->get(route('admin.queue-insights.show', $queue))->assertOk();
 });
 
 test('authenticated layout includes csrf meta for livewire requests', function () {

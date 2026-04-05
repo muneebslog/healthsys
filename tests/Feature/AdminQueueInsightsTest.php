@@ -15,12 +15,10 @@ use App\Models\User;
 use Livewire\Livewire;
 
 test('guests cannot access admin queue insights', function () {
-    $queue = Queue::factory()->create();
-
     $this->get(route('admin.queue-insights'))
         ->assertRedirect(route('login'));
 
-    $this->get(route('admin.queue-insights.show', $queue))
+    $this->get(route('admin.queue-insights.show', ['queue' => 1]))
         ->assertRedirect(route('login'));
 });
 
@@ -29,6 +27,36 @@ test('staff cannot access admin queue insights', function () {
 
     $this->actingAs($user)
         ->get(route('admin.queue-insights'))
+        ->assertForbidden();
+});
+
+test('staff cannot access admin queue insight show', function () {
+    $user = User::factory()->create(['role' => UserRole::Staff]);
+    $shiftOpener = User::factory()->create();
+    $shift = Shift::create([
+        'opened_by' => $shiftOpener->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+    $service = Service::create([
+        'name' => 'StaffBlockedShow',
+        'is_standalone' => false,
+        'reset_type' => QueueResetType::Daily,
+        'is_active' => true,
+    ]);
+    $queue = Queue::create([
+        'service_id' => $service->id,
+        'doctor_id' => null,
+        'shift_id' => $shift->id,
+        'status' => QueueStatus::Active,
+        'current_token' => 0,
+        'current_flow_token' => 0,
+        'closed_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.queue-insights.show', $queue))
         ->assertForbidden();
 });
 
@@ -113,7 +141,7 @@ test('queue insights date filter excludes queues outside range', function () {
         ->assertDontSee('OutOfRangeQueueSvc');
 });
 
-test('admin can open token detail modal for a queue', function () {
+test('admin can open queue token insight page for a queue', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);
     $shiftOpener = User::factory()->create();
     $shift = Shift::create([
@@ -123,13 +151,13 @@ test('admin can open token detail modal for a queue', function () {
         'opened_at' => now(),
     ]);
     $service = Service::create([
-        'name' => 'ModalQueueService',
+        'name' => 'ShowPageQueueService',
         'is_standalone' => false,
         'reset_type' => QueueResetType::Daily,
         'is_active' => true,
     ]);
     $doctor = Doctor::create([
-        'name' => 'Dr. Modal',
+        'name' => 'Dr. Show Page',
         'specialization' => null,
         'phone' => null,
         'status' => 'active',
@@ -145,7 +173,7 @@ test('admin can open token detail modal for a queue', function () {
         'current_flow_token' => 0,
         'closed_at' => null,
     ]);
-    $patient = Patient::factory()->create(['name' => 'TokenModalPatient']);
+    $patient = Patient::factory()->create(['name' => 'TokenShowPagePatient']);
     QueueToken::create([
         'queue_id' => $queue->id,
         'patient_id' => $patient->id,
@@ -157,11 +185,10 @@ test('admin can open token detail modal for a queue', function () {
         'paid_at' => null,
     ]);
 
-    Livewire::actingAs($admin)
-        ->test('pages::admin.queue-insights')
-        ->call('openTokens', $queue->id)
-        ->assertSet('showTokensModal', true)
-        ->assertSet('selectedQueueId', $queue->id)
-        ->assertSee('TokenModalPatient')
-        ->assertSee('7');
+    $this->actingAs($admin)
+        ->get(route('admin.queue-insights.show', $queue))
+        ->assertOk()
+        ->assertSee('ShowPageQueueService')
+        ->assertSee('Dr. Show Page')
+        ->assertSee('TokenShowPagePatient');
 });
