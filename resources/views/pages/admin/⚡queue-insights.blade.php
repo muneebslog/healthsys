@@ -2,7 +2,6 @@
 
 use App\Enums\UserRole;
 use App\Models\Queue;
-use App\Models\QueueToken;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Auth;
@@ -18,10 +17,6 @@ new #[Title('Queue insights')] class extends Component
     public string $dateFrom = '';
 
     public string $dateTo = '';
-
-    public bool $showTokensModal = false;
-
-    public ?int $selectedQueueId = null;
 
     public function mount(): void
     {
@@ -41,19 +36,6 @@ new #[Title('Queue insights')] class extends Component
     public function updatedDateTo(): void
     {
         $this->resetPage();
-    }
-
-    public function updatedShowTokensModal(bool $value): void
-    {
-        if (! $value) {
-            $this->selectedQueueId = null;
-        }
-    }
-
-    public function openTokens(int $queueId): void
-    {
-        $this->selectedQueueId = $queueId;
-        $this->showTokensModal = true;
     }
 
     public function formatDt(?CarbonInterface $value): string
@@ -97,32 +79,6 @@ new #[Title('Queue insights')] class extends Component
             ->orderByDesc('created_at')
             ->paginate(20);
     }
-
-    #[Computed]
-    public function selectedQueue(): ?Queue
-    {
-        if ($this->selectedQueueId === null) {
-            return null;
-        }
-
-        return Queue::query()
-            ->with(['service', 'doctor', 'shift'])
-            ->find($this->selectedQueueId);
-    }
-
-    #[Computed]
-    public function selectedQueueTokens()
-    {
-        if ($this->selectedQueueId === null) {
-            return collect();
-        }
-
-        return QueueToken::query()
-            ->where('queue_id', $this->selectedQueueId)
-            ->with('patient')
-            ->orderBy('token_number')
-            ->get();
-    }
 }; ?>
 
 <div class="mx-auto max-w-6xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
@@ -135,7 +91,7 @@ new #[Title('Queue insights')] class extends Component
                         {{ __('Queue insights') }}
                     </flux:heading>
                     <flux:text class="mt-1 max-w-2xl text-zinc-600 dark:text-zinc-400">
-                        {{ __('Review historical token queues: when each line opened and closed, then drill into tokens for reserved, called, completed, and paid times.') }}
+                        {{ __('Review historical token queues: when each line opened and closed. Open a queue to see every token’s arrival, call, completion, and payment times.') }}
                     </flux:text>
                 </div>
                 <flux:badge color="zinc" class="shrink-0">
@@ -179,7 +135,7 @@ new #[Title('Queue insights')] class extends Component
                             <th class="px-6 py-3">{{ __('Shift opened') }}</th>
                             <th class="px-6 py-3">{{ __('Status') }}</th>
                             <th class="px-6 py-3 tabular-nums">{{ __('Tokens') }}</th>
-                            <th class="px-6 py-3 text-end">{{ __('Details') }}</th>
+                            <th class="px-6 py-3 text-end">{{ __('Token insights') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -213,8 +169,14 @@ new #[Title('Queue insights')] class extends Component
                                     {{ $row->tokens_count }}
                                 </td>
                                 <td class="px-6 py-4 text-end">
-                                    <flux:button size="sm" variant="ghost" icon="eye" wire:click="openTokens({{ $row->id }})">
-                                        {{ __('Tokens') }}
+                                    <flux:button
+                                        size="sm"
+                                        variant="primary"
+                                        icon="arrow-top-right-on-square"
+                                        :href="route('admin.queue-insights.show', $row)"
+                                        wire:navigate
+                                    >
+                                        {{ __('View tokens') }}
                                     </flux:button>
                                 </td>
                             </tr>
@@ -230,79 +192,4 @@ new #[Title('Queue insights')] class extends Component
             @endif
         @endif
     </div>
-
-    <flux:modal wire:model="showTokensModal" name="queue-insight-tokens" class="min-w-[20rem] max-w-5xl">
-        @if ($this->selectedQueue)
-            <div class="space-y-4">
-                <div>
-                    <flux:heading size="lg">{{ __('Tokens') }} — {{ $this->selectedQueue->service?->name ?? '—' }}</flux:heading>
-                    <flux:text class="mt-1 text-zinc-600 dark:text-zinc-400">
-                        {{ $this->selectedQueue->doctor?->name ?? __('General') }}
-                        ·
-                        {{ __('Queue opened') }} {{ $this->formatDt($this->selectedQueue->created_at) }}
-                        @if ($this->selectedQueue->closed_at)
-                            · {{ __('Closed') }} {{ $this->formatDt($this->selectedQueue->closed_at) }}
-                        @endif
-                    </flux:text>
-                </div>
-
-                @if ($this->selectedQueueTokens->isEmpty())
-                    <flux:text class="text-zinc-500">{{ __('No tokens on this queue.') }}</flux:text>
-                @else
-                    <div class="max-h-[min(28rem,70vh)] overflow-auto rounded-xl border border-zinc-200 dark:border-zinc-700">
-                        <table class="w-full min-w-[720px] text-left text-sm">
-                            <thead class="sticky top-0 z-10 border-b border-zinc-100 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/90">
-                                <tr>
-                                    <th class="px-4 py-2.5">#</th>
-                                    <th class="px-4 py-2.5">{{ __('Patient') }}</th>
-                                    <th class="px-4 py-2.5">{{ __('Status') }}</th>
-                                    <th class="px-4 py-2.5">{{ __('Reserved / arrived') }}</th>
-                                    <th class="px-4 py-2.5">{{ __('Called') }}</th>
-                                    <th class="px-4 py-2.5">{{ __('Completed') }}</th>
-                                    <th class="px-4 py-2.5">{{ __('Paid') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                @foreach ($this->selectedQueueTokens as $token)
-                                    <tr wire:key="queue-insight-token-{{ $token->id }}" class="align-top">
-                                        <td class="whitespace-nowrap px-4 py-3 font-mono tabular-nums font-semibold text-zinc-900 dark:text-white">
-                                            {{ $token->token_number }}
-                                        </td>
-                                        <td class="px-4 py-3 text-zinc-700 dark:text-zinc-300">
-                                            {{ $token->patient?->name ?? '—' }}
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            @if ($token->status->value === 'done')
-                                                <flux:badge color="lime">{{ __('Done') }}</flux:badge>
-                                            @elseif ($token->status->value === 'serving')
-                                                <flux:badge color="amber">{{ __('Serving') }}</flux:badge>
-                                            @elseif ($token->status->value === 'waiting')
-                                                <flux:badge color="zinc">{{ __('Waiting') }}</flux:badge>
-                                            @elseif ($token->status->value === 'reserved')
-                                                <flux:badge color="sky">{{ __('Reserved') }}</flux:badge>
-                                            @else
-                                                <flux:badge color="zinc">{{ __('Skipped') }}</flux:badge>
-                                            @endif
-                                        </td>
-                                        <td class="whitespace-nowrap px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400">
-                                            {{ $this->formatDt($token->reserved_at) }}
-                                        </td>
-                                        <td class="whitespace-nowrap px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400">
-                                            {{ $this->formatDt($token->called_at) }}
-                                        </td>
-                                        <td class="whitespace-nowrap px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400">
-                                            {{ $this->formatDt($token->completed_at) }}
-                                        </td>
-                                        <td class="whitespace-nowrap px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400">
-                                            {{ $this->formatDt($token->paid_at) }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
-            </div>
-        @endif
-    </flux:modal>
 </div>

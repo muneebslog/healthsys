@@ -15,7 +15,12 @@ use App\Models\User;
 use Livewire\Livewire;
 
 test('guests cannot access admin queue insights', function () {
+    $queue = Queue::factory()->create();
+
     $this->get(route('admin.queue-insights'))
+        ->assertRedirect(route('login'));
+
+    $this->get(route('admin.queue-insights.show', $queue))
         ->assertRedirect(route('login'));
 });
 

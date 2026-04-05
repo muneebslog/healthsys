@@ -123,7 +123,7 @@
                         <flux:sidebar.item icon="arrow-top-right-on-square" :href="route('admin.lab-api-logs')" :current="request()->routeIs('admin.lab-api-logs')" wire:navigate>
                             {{ __('Lab API log') }}
                         </flux:sidebar.item>
-                        <flux:sidebar.item icon="chart-bar" :href="route('admin.queue-insights')" :current="request()->routeIs('admin.queue-insights')" wire:navigate>
+                        <flux:sidebar.item icon="chart-bar" :href="route('admin.queue-insights')" :current="request()->routeIs('admin.queue-insights') || request()->routeIs('admin.queue-insights.show')" wire:navigate>
                             {{ __('Queue insights') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="user-group" :href="route('admin.doctors')" :current="request()->routeIs('admin.doctors')" wire:navigate>
