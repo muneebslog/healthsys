@@ -44,6 +44,7 @@ test('admin can access settings crud pages', function () {
     $this->get(route('admin.service-prices'))->assertOk();
     $this->get(route('admin.users'))->assertOk();
     $this->get(route('admin.lab-api-logs'))->assertOk();
+    $this->get(route('admin.queue-insights'))->assertOk();
 });
 
 test('authenticated layout includes csrf meta for livewire requests', function () {
