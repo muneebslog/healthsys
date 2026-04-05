@@ -167,32 +167,22 @@
             font-weight: 600;
             color: #333;
         }
-        .lab-qr-block {
+        .lab-qr-hero {
             text-align: center;
-            margin-top: 14px;
-            padding-top: 10px;
-            border-top: 1px dashed #bbb;
         }
-        .lab-qr-block img {
+        .lab-qr-hero img {
             display: block;
-            margin: 0 auto 6px;
+            margin: 4px auto 6px;
             width: 120px;
             height: 120px;
             image-rendering: pixelated;
-        }
-        .lab-qr-caption {
-            font-size: 9px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #444;
-            margin-bottom: 4px;
         }
         .lab-qr-url {
             font-size: 8px;
             line-height: 1.3;
             word-break: break-all;
             color: #333;
+            max-width: 100%;
         }
         @media print {
             body { padding: 4px 6px; max-width: none; }
@@ -209,24 +199,37 @@
     @php
         $multiService = $rows->count() > 1;
         $rowsWithToken = $rows->filter(fn ($r) => filled($r['token_number'] ?? null));
+        $labQrInHero = ($isLabInvoice ?? false)
+            && ! empty($labCaseQrDataUri ?? null)
+            && ! empty($labCaseInvoiceUrl ?? null);
     @endphp
 
     <div class="patient-block">
         <div class="patient-name">{{ $invoice->patient?->name ?? '—' }}</div>
-        <div class="token-label">{{ __('Token') }}</div>
-        @if ($rowsWithToken->isEmpty())
-            <div class="token-hero">—</div>
-        @elseif (! $multiService || $rowsWithToken->count() === 1)
-            <div class="token-hero">{{ $rowsWithToken->first()['token_number'] }}</div>
+        @if ($labQrInHero)
+            <div class="token-label">{{ __('Lab portal') }}</div>
+            <div class="lab-qr-hero">
+                <img src="{{ $labCaseQrDataUri }}" width="120" height="120" alt="{{ __('QR code') }}" />
+                <div class="lab-qr-url">{{ $labCaseInvoiceUrl }}</div>
+            </div>
         @else
-            @foreach ($rows as $row)
-                @if (filled($row['token_number'] ?? null))
-                    <div class="token-stack-item">
-                        <div class="token-service-prefix">{{ $row['token_prefix'] }} · {{ $row['service'] }}</div>
-                        <div class="token-hero-stacked">{{ $row['token_number'] }}</div>
-                    </div>
-                @endif
-            @endforeach
+            <div class="token-label">{{ ($isLabInvoice ?? false) ? __('Lab portal') : __('Token') }}</div>
+            @if ($isLabInvoice ?? false)
+                <div class="token-hero">—</div>
+            @elseif ($rowsWithToken->isEmpty())
+                <div class="token-hero">—</div>
+            @elseif (! $multiService || $rowsWithToken->count() === 1)
+                <div class="token-hero">{{ $rowsWithToken->first()['token_number'] }}</div>
+            @else
+                @foreach ($rows as $row)
+                    @if (filled($row['token_number'] ?? null))
+                        <div class="token-stack-item">
+                            <div class="token-service-prefix">{{ $row['token_prefix'] }} · {{ $row['service'] }}</div>
+                            <div class="token-hero-stacked">{{ $row['token_number'] }}</div>
+                        </div>
+                    @endif
+                @endforeach
+            @endif
         @endif
     </div>
 
@@ -301,14 +304,6 @@
             @for ($i = 0; $i < 8; $i++)
                 <div class="rx-line"></div>
             @endfor
-        </div>
-    @endif
-
-    @if (! empty($labCaseQrDataUri ?? null) && ! empty($labCaseInvoiceUrl ?? null))
-        <div class="lab-qr-block">
-            <div class="lab-qr-caption">{{ __('Lab portal') }}</div>
-            <img src="{{ $labCaseQrDataUri }}" width="120" height="120" alt="{{ __('QR code') }}" />
-            <div class="lab-qr-url">{{ $labCaseInvoiceUrl }}</div>
         </div>
     @endif
 
