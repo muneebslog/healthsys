@@ -204,7 +204,10 @@ it('maps non-binary patient gender using the configured fallback for the externa
         ->call('createAndPrint')
         ->assertHasNoErrors();
 
-    Http::assertSent(fn ($request) => $request['gender'] === 'female' && $request['test_codes'] === [2704]);
+    Http::assertSent(fn ($request) => $request['gender'] === 'female'
+        && $request['test_codes'] === [2704]
+        && $request['age'] === 28
+        && $request['age_unit'] === 'Year');
 });
 
 it('does not call the external lab API when the invoice only has outsourced tests', function () {
