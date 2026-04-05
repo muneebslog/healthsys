@@ -3,6 +3,7 @@
 use App\Enums\InvoiceKind;
 use App\Enums\UserRole;
 use App\Models\Invoice;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -79,6 +80,15 @@ new #[Title('Invoice lookup')] class extends Component
     protected function formatMoney(int $amount): string
     {
         return number_format($amount);
+    }
+
+    public function formatDt(?CarbonInterface $value): string
+    {
+        if ($value === null) {
+            return '—';
+        }
+
+        return $value->timezone(config('app.timezone'))->format('M j, Y g:i A');
     }
 
     /**
@@ -174,6 +184,14 @@ new #[Title('Invoice lookup')] class extends Component
             <flux:card class="p-6">
                 <flux:heading size="md" class="mb-4">{{ __('Invoice summary') }}</flux:heading>
                 <dl class="space-y-2 text-sm">
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-zinc-500">{{ __('Created') }}</dt>
+                        <dd class="text-end text-zinc-800 dark:text-zinc-200">{{ $this->formatDt($inv->created_at) }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-zinc-500">{{ __('Last updated') }}</dt>
+                        <dd class="text-end text-zinc-800 dark:text-zinc-200">{{ $this->formatDt($inv->updated_at) }}</dd>
+                    </div>
                     <div class="flex justify-between gap-4">
                         <dt class="text-zinc-500">{{ __('Shift') }}</dt>
                         <dd class="tabular-nums text-zinc-800 dark:text-zinc-200">#{{ $inv->shift_id }}</dd>

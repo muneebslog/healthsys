@@ -83,7 +83,7 @@ test('admin can access queue insights and see queues in range', function () {
         'is_on_payroll' => false,
         'user_id' => null,
     ]);
-    Queue::create([
+    $queue = Queue::create([
         'service_id' => $service->id,
         'doctor_id' => $doctor->id,
         'shift_id' => $shift->id,
@@ -97,7 +97,8 @@ test('admin can access queue insights and see queues in range', function () {
         ->get(route('admin.queue-insights'))
         ->assertOk()
         ->assertSee('QueueInsightService')
-        ->assertSee('Dr. Queue Insight');
+        ->assertSee('Dr. Queue Insight')
+        ->assertSee('#'.$queue->id, false);
 });
 
 test('queue insights date filter excludes queues outside range', function () {

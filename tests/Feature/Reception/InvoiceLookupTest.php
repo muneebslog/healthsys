@@ -152,6 +152,9 @@ it('shows patient service token and queue after lookup', function () {
         'doctor_share_paid' => false,
     ]);
 
+    $createdLabel = __('Created');
+    $createdFormatted = $invoice->fresh()->created_at->timezone(config('app.timezone'))->format('M j, Y g:i A');
+
     Livewire::actingAs($staff)
         ->test('pages::reception.invoice-lookup')
         ->set('invoiceNumber', (string) $invoice->id)
@@ -160,5 +163,7 @@ it('shows patient service token and queue after lookup', function () {
         ->assertSee('Lookup Patient Alpha')
         ->assertSee('Consultation Lookup')
         ->assertSee('7')
-        ->assertSee(__('Queue').' #'.$queue->id, false);
+        ->assertSee(__('Queue').' #'.$queue->id, false)
+        ->assertSee($createdLabel)
+        ->assertSee($createdFormatted, false);
 });

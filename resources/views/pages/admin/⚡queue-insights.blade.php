@@ -201,6 +201,7 @@ new #[Title('Queue insights')] class extends Component
                 <table class="w-full min-w-[960px] text-left text-sm">
                     <thead class="border-b border-zinc-100 bg-zinc-50/80 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50">
                         <tr>
+                            <th class="px-6 py-3 tabular-nums">{{ __('Queue ID') }}</th>
                             <th class="px-6 py-3">{{ __('Opened') }}</th>
                             <th class="px-6 py-3">{{ __('Closed') }}</th>
                             <th class="px-6 py-3">{{ __('Service') }}</th>
@@ -214,6 +215,9 @@ new #[Title('Queue insights')] class extends Component
                     <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                         @foreach ($this->queues as $row)
                             <tr wire:key="queue-insight-{{ $row->id }}" class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
+                                <td class="whitespace-nowrap px-6 py-4 font-mono tabular-nums text-zinc-800 dark:text-zinc-200">
+                                    #{{ $row->id }}
+                                </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-zinc-600 dark:text-zinc-400">
                                     {{ $this->formatDt($row->created_at) }}
                                 </td>
