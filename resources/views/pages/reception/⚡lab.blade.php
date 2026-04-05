@@ -12,6 +12,7 @@ use App\Models\LabTest;
 use App\Models\Patient;
 use App\Models\Shift;
 use App\Models\Visit;
+use App\Services\HmsLabCaseSyncService;
 use App\Services\LabInvoiceLineAllocator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -450,6 +451,8 @@ new #[Title('Lab checkout')] class extends Component
         if ($invoiceId === null) {
             return;
         }
+
+        app(HmsLabCaseSyncService::class)->pushForInvoiceId($invoiceId);
 
         $this->reset(['selectedTestIds', 'pendingTestId', 'discountPercent', 'testSearch']);
         unset($this->selectedTestsRows, $this->subtotalAmount, $this->discountAmountPreview, $this->finalAmountPreview);

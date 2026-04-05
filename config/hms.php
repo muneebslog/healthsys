@@ -60,4 +60,26 @@ return [
         'shift_close_finance_manager_phone' => env('HMS_SHIFT_CLOSE_SMS_FINANCE'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | External lab HMS — outbound lab case sync
+    |--------------------------------------------------------------------------
+    |
+    | After a lab invoice is created in this app, optionally POST the case to the
+    | lab HMS instance (Bearer token must match that server’s HMS_API_TOKEN).
+    | Sync is skipped when the token or URL is empty, or when sync_enabled is false.
+    |
+    */
+    'lab_cases' => [
+        'sync_enabled' => filter_var(
+            env('HMS_LAB_CASES_SYNC_ENABLED', true),
+            FILTER_VALIDATE_BOOLEAN
+        ),
+        'api_url' => env('HMS_LAB_CASES_API_URL', 'https://lab.mohsinmedicalcomplex.com'),
+        'api_token' => env('HMS_LAB_CASES_API_TOKEN'),
+        'timeout' => (int) env('HMS_LAB_CASES_API_TIMEOUT', 15),
+        'invoice_number_prefix' => env('HMS_LAB_CASES_INVOICE_PREFIX', 'HS-'),
+        'fallback_gender' => env('HMS_LAB_CASES_FALLBACK_GENDER', 'male'),
+    ],
+
 ];
