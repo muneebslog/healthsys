@@ -120,6 +120,9 @@
                         <flux:sidebar.item icon="clipboard-document-list" :href="route('admin.lab-tests')" :current="request()->routeIs('admin.lab-tests')" wire:navigate>
                             {{ __('Lab tests') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="arrow-top-right-on-square" :href="route('admin.lab-api-logs')" :current="request()->routeIs('admin.lab-api-logs')" wire:navigate>
+                            {{ __('Lab API log') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="user-group" :href="route('admin.doctors')" :current="request()->routeIs('admin.doctors')" wire:navigate>
                             {{ __('Doctors') }}
                         </flux:sidebar.item>

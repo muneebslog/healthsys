@@ -37,6 +37,12 @@ new #[Title('Lab checkout')] class extends Component
 
     public ?int $selectedPatientId = null;
 
+    /** Age for lab checkout (0–150); stored on the patient record. */
+    public ?int $patientAge = null;
+
+    /** `year` or `month` — sent to the lab API as Year / Month. */
+    public string $patientAgeUnit = 'year';
+
     /** @var list<int> */
     public array $selectedTestIds = [];
 
@@ -160,6 +166,8 @@ new #[Title('Lab checkout')] class extends Component
 
         $this->familyId = $family?->id;
         $this->selectedPatientId = null;
+        $this->patientAge = null;
+        $this->patientAgeUnit = 'year';
         $this->clearTestsQuiet();
 
         if (! $family) {
@@ -171,6 +179,8 @@ new #[Title('Lab checkout')] class extends Component
     {
         $this->familyId = null;
         $this->selectedPatientId = null;
+        $this->patientAge = null;
+        $this->patientAgeUnit = 'year';
         $this->phoneQuery = '';
         $this->quickName = '';
         $this->phoneFieldVersion++;
@@ -222,6 +232,7 @@ new #[Title('Lab checkout')] class extends Component
 
         $this->familyId = $family->id;
         $this->selectedPatientId = $family->head_id;
+        $this->hydratePatientAgeFromPatientId($family->head_id);
         $this->clearTestsQuiet();
         unset($this->family);
         $this->resetErrorBag();
@@ -238,6 +249,8 @@ new #[Title('Lab checkout')] class extends Component
         }
 
         $this->selectedPatientId = $patientId;
+        $p = $this->family->patients->firstWhere('id', $patientId);
+        $this->hydratePatientAgeFromPatient($p instanceof Patient ? $p : null);
     }
 
     public function openNewMemberModal(): void
@@ -291,6 +304,7 @@ new #[Title('Lab checkout')] class extends Component
 
         $this->familyId = $family->id;
         $this->selectedPatientId = $family->head_id;
+        $this->hydratePatientAgeFromPatientId($family->head_id);
         $this->showNewFamilyModal = false;
         $this->newHeadName = '';
         $this->newHeadGender = 'male';
@@ -323,6 +337,7 @@ new #[Title('Lab checkout')] class extends Component
         ]);
 
         $this->selectedPatientId = $patient->id;
+        $this->hydratePatientAgeFromPatient($patient);
         $this->showNewMemberModal = false;
         $this->newMemberName = '';
         $this->newMemberGender = 'male';
@@ -376,10 +391,14 @@ new #[Title('Lab checkout')] class extends Component
             'selectedPatientId' => ['required', 'exists:patients,id'],
             'selectedTestIds' => ['required', 'array', 'min:1'],
             'discountPercent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'patientAge' => ['required', 'integer', 'min:0', 'max:150'],
+            'patientAgeUnit' => ['required', 'in:year,month'],
         ], [], [
             'selectedPatientId' => __('patient'),
             'selectedTestIds' => __('tests'),
             'discountPercent' => __('Discount %'),
+            'patientAge' => __('Age'),
+            'patientAgeUnit' => __('Age unit'),
         ]);
 
         $invoiceId = null;
@@ -390,6 +409,11 @@ new #[Title('Lab checkout')] class extends Component
                     ->with('family')
                     ->lockForUpdate()
                     ->findOrFail($this->selectedPatientId);
+
+                $patient->update([
+                    'age' => (int) $this->patientAge,
+                    'age_unit' => $this->patientAgeUnit,
+                ]);
 
                 $orderedTests = [];
                 foreach ($this->selectedTestIds as $tid) {
@@ -467,6 +491,33 @@ new #[Title('Lab checkout')] class extends Component
         $this->pendingTestId = null;
         $this->discountPercent = null;
         unset($this->selectedTestsRows, $this->subtotalAmount, $this->discountAmountPreview, $this->finalAmountPreview);
+    }
+
+    protected function hydratePatientAgeFromPatient(?Patient $patient): void
+    {
+        if (! $patient) {
+            $this->patientAge = null;
+            $this->patientAgeUnit = 'year';
+
+            return;
+        }
+
+        $this->patientAge = $patient->age;
+        $this->patientAgeUnit = in_array($patient->age_unit, ['month', 'year'], true)
+            ? $patient->age_unit
+            : 'year';
+    }
+
+    protected function hydratePatientAgeFromPatientId(?int $patientId): void
+    {
+        if ($patientId === null) {
+            $this->patientAge = null;
+            $this->patientAgeUnit = 'year';
+
+            return;
+        }
+
+        $this->hydratePatientAgeFromPatient(Patient::query()->find($patientId));
     }
 
     protected function effectiveDiscountPercent(): int
@@ -609,6 +660,36 @@ new #[Title('Lab checkout')] class extends Component
                     <flux:button variant="outline" size="sm" icon="user-plus" wire:click="openNewMemberModal">
                         {{ __('New person in this family') }}
                     </flux:button>
+
+                    @if ($selectedPatientId)
+                        <div class="rounded-xl border border-teal-200/80 bg-teal-50/40 p-4 dark:border-teal-900/50 dark:bg-teal-950/20">
+                            <flux:heading size="sm" class="text-zinc-900 dark:text-white">{{ __('Patient age (lab)') }}</flux:heading>
+                            <flux:text class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                                {{ __('Required for lab records. Saved on the patient profile and sent to the external lab when applicable.') }}
+                            </flux:text>
+                            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                                <flux:field>
+                                    <flux:label>{{ __('Age') }}</flux:label>
+                                    <flux:input
+                                        type="number"
+                                        wire:model.number="patientAge"
+                                        min="0"
+                                        max="150"
+                                        placeholder="0–150"
+                                    />
+                                    <flux:error name="patientAge" />
+                                </flux:field>
+                                <flux:field>
+                                    <flux:label>{{ __('Unit') }}</flux:label>
+                                    <flux:select wire:model.live="patientAgeUnit">
+                                        <flux:select.option value="year">{{ __('Years') }}</flux:select.option>
+                                        <flux:select.option value="month">{{ __('Months') }}</flux:select.option>
+                                    </flux:select>
+                                    <flux:error name="patientAgeUnit" />
+                                </flux:field>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
         </flux:card>
@@ -692,7 +773,7 @@ new #[Title('Lab checkout')] class extends Component
                     icon="printer"
                     type="button"
                     wire:click="createAndPrint"
-                    :disabled="! $this->activeShift || ! $selectedPatientId"
+                    :disabled="! $this->activeShift || ! $selectedPatientId || $patientAge === null"
                     wire:loading.attr="disabled"
                 >
                     <span wire:loading.remove wire:target="createAndPrint">{{ __('Create & print') }}</span>

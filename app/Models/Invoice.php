@@ -51,4 +51,9 @@ class Invoice extends Model
     {
         return $this->hasMany(InvoiceLabTest::class);
     }
+
+    public function labApiRequestLogs(): HasMany
+    {
+        return $this->hasMany(LabApiRequestLog::class);
+    }
 }

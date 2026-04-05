@@ -14,7 +14,7 @@ class Patient extends Model
     /** @use HasFactory<PatientFactory> */
     use HasFactory;
 
-    protected $fillable = ['name', 'gender', 'type', 'relation_to_head', 'family_id'];
+    protected $fillable = ['name', 'gender', 'type', 'relation_to_head', 'family_id', 'age', 'age_unit'];
 
     protected function casts(): array
     {

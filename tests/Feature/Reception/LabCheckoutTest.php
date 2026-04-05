@@ -52,6 +52,8 @@ test('staff can checkout lab tests with 0, 50, and 100 percent discount', functi
         ->call('lookupPhone')
         ->assertSet('familyId', $family->id)
         ->set('selectedPatientId', $patient->id)
+        ->set('patientAge', 35)
+        ->set('patientAgeUnit', 'year')
         ->set('selectedTestIds', [$lt1->id, $lt2->id])
         ->set('discountPercent', $discountPercent)
         ->call('createAndPrint')
@@ -76,6 +78,10 @@ test('staff can checkout lab tests with 0, 50, and 100 percent discount', functi
 
     $sumLineDiscount = (int) $invoice->labTests->sum('line_discount');
     expect($sumLineDiscount)->toBe($expectedDiscount);
+
+    $patient->refresh();
+    expect($patient->age)->toBe(35)
+        ->and($patient->age_unit)->toBe('year');
 })->with([
     [0, 0, 1500],
     [50, 750, 750],
@@ -114,6 +120,8 @@ test('lab checkout treats null discount percent like zero', function () {
         ->set('phoneQuery', '03009998877')
         ->call('lookupPhone')
         ->set('selectedPatientId', $patient->id)
+        ->set('patientAge', 22)
+        ->set('patientAgeUnit', 'year')
         ->set('selectedTestIds', [$lt->id])
         ->set('discountPercent', null)
         ->call('createAndPrint')
@@ -160,6 +168,8 @@ test('staff can print a lab invoice and see test codes', function () {
         ->set('phoneQuery', '03002223344')
         ->call('lookupPhone')
         ->set('selectedPatientId', $patient->id)
+        ->set('patientAge', 40)
+        ->set('patientAgeUnit', 'year')
         ->set('selectedTestIds', [$lt->id])
         ->set('discountPercent', 0)
         ->call('createAndPrint')
@@ -173,4 +183,44 @@ test('staff can print a lab invoice and see test codes', function () {
     $response->assertOk();
     $response->assertSee('PRINT-99', false);
     $response->assertSee('Vitamin D', false);
+});
+
+test('lab checkout requires patient age before creating an invoice', function () {
+    $staff = User::factory()->create(['role' => UserRole::Staff]);
+
+    Shift::query()->create([
+        'opened_by' => $staff->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+
+    $family = Family::query()->create(['phone' => '03008887766']);
+    $patient = Patient::query()->create([
+        'family_id' => $family->id,
+        'name' => 'No Age Yet',
+        'gender' => 'male',
+        'type' => PatientType::Head,
+        'relation_to_head' => null,
+    ]);
+    $family->update(['head_id' => $patient->id]);
+
+    $lt = LabTest::factory()->create([
+        'test_code' => 'AGE-REQ',
+        'price' => 100,
+        'hospital_share' => 50,
+        'lab_share' => 50,
+    ]);
+
+    Livewire::actingAs($staff)
+        ->test('pages::reception.lab')
+        ->set('phoneQuery', '03008887766')
+        ->call('lookupPhone')
+        ->set('selectedPatientId', $patient->id)
+        ->set('selectedTestIds', [$lt->id])
+        ->set('discountPercent', 0)
+        ->call('createAndPrint')
+        ->assertHasErrors(['patientAge']);
+
+    expect(Invoice::query()->count())->toBe(0);
 });

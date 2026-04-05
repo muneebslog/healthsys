@@ -62,12 +62,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | External lab HMS — outbound lab case sync
+    | External lab HMS — catalog + outbound lab case sync
     |--------------------------------------------------------------------------
     |
-    | After a lab invoice is created in this app, optionally POST the case to the
-    | lab HMS instance (Bearer token must match that server’s HMS_API_TOKEN).
-    | Sync is skipped when the token or URL is empty, or when sync_enabled is false.
+    | Lab API (HTTPS base URL): Bearer HMS_API_TOKEN, Accept/Content-Type JSON.
+    | Endpoints: GET /api/hms/tests (catalog), POST /api/hms/lab-cases (case after billing).
+    | Only invoice lines with sourcing in_house are POSTed; outsourced lines are omitted.
+    | Sync POST is skipped when the token or URL is empty, when sync_enabled is false, or when there
+    | are no in-house lines. Import catalog via: php artisan hms:sync-lab-catalog
+    |
+    | Rate limit (~60 rpm): 429 responses are retried using retry_delays_ms backoff.
     |
     */
     'lab_cases' => [
@@ -80,6 +84,24 @@ return [
         'timeout' => (int) env('HMS_LAB_CASES_API_TIMEOUT', 15),
         'invoice_number_prefix' => env('HMS_LAB_CASES_INVOICE_PREFIX', 'HS-'),
         'fallback_gender' => env('HMS_LAB_CASES_FALLBACK_GENDER', 'male'),
+        /*
+        | POST body: invoice_number or receipt_no (same value: prefix + local invoice id). Validated in code.
+        */
+        'receipt_reference' => env('HMS_LAB_CASES_RECEIPT_REFERENCE', 'invoice_number'),
+        /*
+        | Milliseconds between retries when the lab returns 429 Too Many Requests.
+        */
+        'retry_delays_ms' => (static function (): array {
+            $parsed = array_values(array_filter(
+                array_map(
+                    static fn (string $v): int => (int) trim($v),
+                    explode(',', (string) env('HMS_LAB_CASES_RETRY_DELAYS_MS', '500,1500,3000'))
+                ),
+                static fn (int $v): bool => $v > 0
+            ));
+
+            return $parsed !== [] ? $parsed : [500, 1500, 3000];
+        })(),
     ],
 
 ];

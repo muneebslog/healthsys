@@ -145,6 +145,13 @@ class RoleDashboard extends Component
                         'enabled' => $adminEnabled,
                     ],
                     [
+                        'key' => 'admin.lab-api-logs',
+                        'label' => __('Lab API log'),
+                        'description' => __('Review outbound lab HMS requests and responses.'),
+                        'href' => route('admin.lab-api-logs'),
+                        'enabled' => $adminEnabled,
+                    ],
+                    [
                         'key' => 'admin.doctors',
                         'label' => __('Doctors'),
                         'description' => __('Manage doctors and assignments.'),
