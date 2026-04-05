@@ -40,6 +40,9 @@
                         <flux:sidebar.item icon="currency-dollar" :href="route('invoices.index')" :current="request()->routeIs('invoices.index')" wire:navigate>
                             {{ __('Invoices') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="document-magnifying-glass" :href="route('reception.invoice-lookup')" :current="request()->routeIs('reception.invoice-lookup')" wire:navigate>
+                            {{ __('Invoice lookup') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="numbered-list" :href="route('queues.index')" :current="request()->routeIs('queues.index') || request()->routeIs('queues.control')" wire:navigate>
                             {{ __('Queues') }}
                         </flux:sidebar.item>
@@ -56,6 +59,9 @@
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="currency-dollar" :href="route('invoices.index')" :current="request()->routeIs('invoices.index')" wire:navigate>
                             {{ __('Invoices') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="document-magnifying-glass" :href="route('reception.invoice-lookup')" :current="request()->routeIs('reception.invoice-lookup')" wire:navigate>
+                            {{ __('Invoice lookup') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="arrow-path" :href="route('finance.money-trail')" :current="request()->routeIs('finance.money-trail')" wire:navigate>
                             {{ __('Money trail') }}
@@ -85,6 +91,9 @@
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="currency-dollar" :href="route('invoices.index')" :current="request()->routeIs('invoices.index')" wire:navigate>
                             {{ __('Invoices') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="document-magnifying-glass" :href="route('reception.invoice-lookup')" :current="request()->routeIs('reception.invoice-lookup')" wire:navigate>
+                            {{ __('Invoice lookup') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif
@@ -125,6 +134,9 @@
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="chart-bar" :href="route('admin.queue-insights')" :current="request()->routeIs('admin.queue-insights') || request()->routeIs('admin.queue-insights.show')" wire:navigate>
                             {{ __('Queue insights') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="phone" :href="route('admin.appointment-contacts')" :current="request()->routeIs('admin.appointment-contacts')" wire:navigate>
+                            {{ __('Consultation contacts') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="user-group" :href="route('admin.doctors')" :current="request()->routeIs('admin.doctors')" wire:navigate>
                             {{ __('Doctors') }}

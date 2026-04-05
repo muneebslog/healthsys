@@ -1,7 +1,9 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Models\Doctor;
 use App\Models\Queue;
+use App\Models\Service;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +19,12 @@ new #[Title('Queue insights')] class extends Component
     public string $dateFrom = '';
 
     public string $dateTo = '';
+
+    /** @var string Empty = all services; otherwise numeric service id */
+    public string $serviceFilter = '';
+
+    /** @var string Empty = all lines; "general" = no doctor; otherwise numeric doctor id */
+    public string $doctorFilter = '';
 
     public function mount(): void
     {
@@ -34,6 +42,16 @@ new #[Title('Queue insights')] class extends Component
     }
 
     public function updatedDateTo(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedServiceFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDoctorFilter(): void
     {
         $this->resetPage();
     }
@@ -68,16 +86,52 @@ new #[Title('Queue insights')] class extends Component
     }
 
     #[Computed]
+    public function filterServices()
+    {
+        return Service::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+    }
+
+    #[Computed]
+    public function filterDoctors()
+    {
+        return Doctor::query()
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
+    }
+
+    #[Computed]
     public function queues()
     {
         [$from, $to] = $this->resolvedDateRange();
 
-        return Queue::query()
+        $query = Queue::query()
             ->with(['service', 'doctor', 'shift'])
             ->withCount('tokens')
-            ->whereBetween('created_at', [$from, $to])
-            ->orderByDesc('created_at')
-            ->paginate(20);
+            ->whereBetween('created_at', [$from, $to]);
+
+        if ($this->serviceFilter !== '') {
+            $serviceId = filter_var($this->serviceFilter, FILTER_VALIDATE_INT);
+            if ($serviceId !== false) {
+                $query->where('service_id', $serviceId);
+            }
+        }
+
+        if ($this->doctorFilter !== '') {
+            if ($this->doctorFilter === 'general') {
+                $query->whereNull('doctor_id');
+            } else {
+                $doctorId = filter_var($this->doctorFilter, FILTER_VALIDATE_INT);
+                if ($doctorId !== false) {
+                    $query->where('doctor_id', $doctorId);
+                }
+            }
+        }
+
+        return $query->orderByDesc('created_at')->paginate(20);
     }
 }; ?>
 
@@ -99,7 +153,7 @@ new #[Title('Queue insights')] class extends Component
                 </flux:badge>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 xl:items-end">
                 <flux:field>
                     <flux:label>{{ __('From') }}</flux:label>
                     <flux:input type="date" wire:model.live="dateFrom" />
@@ -108,12 +162,31 @@ new #[Title('Queue insights')] class extends Component
                     <flux:label>{{ __('To') }}</flux:label>
                     <flux:input type="date" wire:model.live="dateTo" />
                 </flux:field>
-                <div class="sm:col-span-2 rounded-xl border border-dashed border-zinc-200 bg-white/60 px-4 py-3 dark:border-zinc-600 dark:bg-zinc-800/40">
-                    <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('Filter') }}</flux:text>
-                    <flux:text class="text-sm text-zinc-700 dark:text-zinc-300">
-                        {{ __('Queues are listed when the queue row was created (line opened) within this range.') }}
-                    </flux:text>
-                </div>
+                <flux:field class="xl:col-span-2">
+                    <flux:label>{{ __('Service') }}</flux:label>
+                    <flux:select wire:model.live="serviceFilter" placeholder="{{ __('All services') }}">
+                        <flux:select.option value="">{{ __('All services') }}</flux:select.option>
+                        @foreach ($this->filterServices as $svc)
+                            <flux:select.option value="{{ $svc->id }}" wire:key="qi-filter-svc-{{ $svc->id }}">{{ $svc->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </flux:field>
+                <flux:field class="xl:col-span-2">
+                    <flux:label>{{ __('Doctor / line') }}</flux:label>
+                    <flux:select wire:model.live="doctorFilter" placeholder="{{ __('All lines') }}">
+                        <flux:select.option value="">{{ __('All lines') }}</flux:select.option>
+                        <flux:select.option value="general">{{ __('General (no doctor)') }}</flux:select.option>
+                        @foreach ($this->filterDoctors as $doc)
+                            <flux:select.option value="{{ $doc->id }}" wire:key="qi-filter-doc-{{ $doc->id }}">{{ $doc->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </flux:field>
+            </div>
+            <div class="rounded-xl border border-dashed border-zinc-200 bg-white/60 px-4 py-3 dark:border-zinc-600 dark:bg-zinc-800/40">
+                <flux:text class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ __('How it works') }}</flux:text>
+                <flux:text class="text-sm text-zinc-700 dark:text-zinc-300">
+                    {{ __('Queues appear when the line opened (row created) in the date range. Narrow by service and/or doctor; General means standalone lines with no doctor.') }}
+                </flux:text>
             </div>
         </div>
     </header>
@@ -121,7 +194,7 @@ new #[Title('Queue insights')] class extends Component
     <div class="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
         @if ($this->queues->isEmpty())
             <div class="px-6 py-16 text-center">
-                <flux:text class="text-zinc-500">{{ __('No queues in this date range.') }}</flux:text>
+                <flux:text class="text-zinc-500">{{ __('No queues match your date range and filters.') }}</flux:text>
             </div>
         @else
             <div class="overflow-x-auto">

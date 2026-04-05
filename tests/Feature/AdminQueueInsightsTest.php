@@ -134,11 +134,12 @@ test('queue insights date filter excludes queues outside range', function () {
     ]);
     $queue->forceFill(['created_at' => now()->subDays(30), 'updated_at' => now()->subDays(30)])->save();
 
-    Livewire::actingAs($admin)
+    $lw = Livewire::actingAs($admin)
         ->test('pages::admin.queue-insights')
         ->set('dateFrom', now()->subDay()->toDateString())
-        ->set('dateTo', now()->toDateString())
-        ->assertDontSee('OutOfRangeQueueSvc');
+        ->set('dateTo', now()->toDateString());
+
+    expect($lw->instance()->queues->total())->toBe(0);
 });
 
 test('admin can open queue token insight page for a queue', function () {
@@ -191,4 +192,96 @@ test('admin can open queue token insight page for a queue', function () {
         ->assertSee('ShowPageQueueService')
         ->assertSee('Dr. Show Page')
         ->assertSee('TokenShowPagePatient');
+});
+
+test('queue insights filters by service doctor and general line', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $shiftOpener = User::factory()->create();
+    $shift = Shift::create([
+        'opened_by' => $shiftOpener->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+
+    $svcAlpha = Service::create([
+        'name' => 'QiFilterAlpha',
+        'is_standalone' => false,
+        'reset_type' => QueueResetType::Daily,
+        'is_active' => true,
+    ]);
+    $svcBeta = Service::create([
+        'name' => 'QiFilterBeta',
+        'is_standalone' => false,
+        'reset_type' => QueueResetType::Daily,
+        'is_active' => true,
+    ]);
+    $docOne = Doctor::create([
+        'name' => 'QiFilterDocOne',
+        'specialization' => null,
+        'phone' => null,
+        'status' => 'active',
+        'is_on_payroll' => false,
+        'user_id' => null,
+    ]);
+    $docTwo = Doctor::create([
+        'name' => 'QiFilterDocTwo',
+        'specialization' => null,
+        'phone' => null,
+        'status' => 'active',
+        'is_on_payroll' => false,
+        'user_id' => null,
+    ]);
+
+    Queue::create([
+        'service_id' => $svcAlpha->id,
+        'doctor_id' => $docOne->id,
+        'shift_id' => $shift->id,
+        'status' => QueueStatus::Active,
+        'current_token' => 0,
+        'current_flow_token' => 0,
+        'closed_at' => null,
+    ]);
+    Queue::create([
+        'service_id' => $svcBeta->id,
+        'doctor_id' => $docTwo->id,
+        'shift_id' => $shift->id,
+        'status' => QueueStatus::Active,
+        'current_token' => 0,
+        'current_flow_token' => 0,
+        'closed_at' => null,
+    ]);
+    $qAlphaGeneral = Queue::create([
+        'service_id' => $svcAlpha->id,
+        'doctor_id' => null,
+        'shift_id' => $shift->id,
+        'status' => QueueStatus::Active,
+        'current_token' => 0,
+        'current_flow_token' => 0,
+        'closed_at' => null,
+    ]);
+
+    $lw = Livewire::actingAs($admin)
+        ->test('pages::admin.queue-insights');
+
+    $queues = $lw->instance()->queues;
+    expect($queues->count())->toBe(3);
+
+    $lw->set('serviceFilter', (string) $svcAlpha->id);
+    $queues = $lw->instance()->queues;
+    expect($queues->count())->toBe(2)
+        ->and($queues->every(fn (Queue $q) => $q->service_id === $svcAlpha->id))->toBeTrue();
+
+    $lw->set('doctorFilter', 'general');
+    $queues = $lw->instance()->queues;
+    expect($queues->count())->toBe(1)
+        ->and($queues->first()->id)->toBe($qAlphaGeneral->id)
+        ->and($queues->first()->doctor_id)->toBeNull();
+
+    $lw->set('serviceFilter', '')
+        ->set('doctorFilter', (string) $docTwo->id);
+    $queues = $lw->instance()->queues;
+    expect($queues->count())->toBe(1)
+        ->and($queues->first()->service_id)->toBe($svcBeta->id)
+        ->and($queues->first()->doctor_id)->toBe($docTwo->id);
 });

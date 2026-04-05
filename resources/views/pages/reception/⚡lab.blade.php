@@ -14,6 +14,7 @@ use App\Models\Shift;
 use App\Models\Visit;
 use App\Services\HmsLabCaseSyncService;
 use App\Services\LabInvoiceLineAllocator;
+use App\Services\LabSampleSlipSerialAllocator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Js;
@@ -436,6 +437,8 @@ new #[Title('Lab checkout')] class extends Component
                 $discountTotal = (int) floor($subtotal * $discountPct / 100);
                 $finalAmount = $subtotal - $discountTotal;
 
+                $labSampleSlipSerial = app(LabSampleSlipSerialAllocator::class)->allocateNext();
+
                 $visit = Visit::query()->create([
                     'patient_id' => $patient->id,
                     'family_id' => $patient->family_id,
@@ -454,6 +457,7 @@ new #[Title('Lab checkout')] class extends Component
                     'discount_percent' => $discountPct,
                     'final_amount' => $finalAmount,
                     'status' => InvoiceStatus::Paid,
+                    'lab_sample_slip_serial' => $labSampleSlipSerial,
                 ]);
 
                 foreach ($lines as $row) {

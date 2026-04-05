@@ -184,6 +184,89 @@
             color: #333;
             max-width: 100%;
         }
+        .sample-slip {
+            page-break-before: always;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 2px dashed #333;
+        }
+        .sample-slip .clinic { margin-bottom: 4px; }
+        .sample-slip-title {
+            text-align: center;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .sample-slip-sub {
+            text-align: center;
+            font-size: 9px;
+            color: #444;
+            margin-bottom: 10px;
+        }
+        .sample-serial-wrap {
+            text-align: center;
+            margin: 10px 0 12px;
+            padding: 10px 6px;
+            border: 2px solid #111;
+            border-radius: 4px;
+        }
+        .sample-serial-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #444;
+            margin-bottom: 4px;
+        }
+        .sample-serial-num {
+            font-size: 30px;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            font-variant-numeric: tabular-nums;
+        }
+        .sample-patient-grid {
+            font-size: 11px;
+            line-height: 1.45;
+            margin-bottom: 10px;
+            padding: 8px 6px;
+            background: #f7f7f7;
+            border-radius: 4px;
+        }
+        .sample-patient-grid dt {
+            font-weight: 700;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #555;
+            margin-top: 6px;
+        }
+        .sample-patient-grid dt:first-child { margin-top: 0; }
+        .sample-patient-grid dd { margin: 0; }
+        .sample-tests-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            margin-top: 4px;
+        }
+        .sample-tests-table th,
+        .sample-tests-table td {
+            padding: 4px 2px;
+            text-align: left;
+            vertical-align: top;
+            border-bottom: 1px solid #ccc;
+        }
+        .sample-tests-table th {
+            font-weight: 700;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #333;
+            border-bottom: 2px solid #111;
+        }
+        .sample-tests-table td.num { text-align: right; white-space: nowrap; }
         @media print {
             body { padding: 4px 6px; max-width: none; }
         }
@@ -308,6 +391,58 @@
     @endif
 
     <div class="footer">{{ __('Thank you') }}</div>
+
+    @if (($isLabInvoice ?? false) && filled($invoice->lab_sample_slip_serial))
+        @php
+            $slipPatient = $invoice->patient;
+            $ageStr = $slipPatient?->age !== null
+                ? (string) (int) $slipPatient->age.' '.($slipPatient->age_unit === 'month' ? __('months') : __('years'))
+                : '—';
+        @endphp
+        <section class="sample-slip" aria-label="{{ __('Lab sample slip') }}">
+            <div class="clinic">{{ $clinicName }}</div>
+            <div class="sample-slip-title">{{ __('Lab sample slip') }}</div>
+            <div class="sample-slip-sub">{{ __('Attach to specimen — no pricing') }}</div>
+            <div class="meta" style="margin-bottom: 8px;">
+                {{ $printedAt->format('d M Y') }} · {{ $printedAt->format('g:i A') }}<br>
+                <strong>{{ __('Receipt ref.') }}</strong> #{{ $invoice->id }}
+            </div>
+            <div class="sample-serial-wrap">
+                <div class="sample-serial-label">{{ __('Sample serial') }}</div>
+                <div class="sample-serial-num">{{ number_format((int) $invoice->lab_sample_slip_serial) }}</div>
+            </div>
+            <dl class="sample-patient-grid">
+                <dt>{{ __('Patient') }}</dt>
+                <dd>{{ $slipPatient?->name ?? '—' }}</dd>
+                <dt>{{ __('Gender') }}</dt>
+                <dd>{{ $slipPatient?->gender ? ucfirst((string) $slipPatient->gender) : '—' }}</dd>
+                <dt>{{ __('Age') }}</dt>
+                <dd>{{ $ageStr }}</dd>
+                <dt>{{ __('Phone') }}</dt>
+                <dd>{{ $slipPatient?->family?->phone ?? '—' }}</dd>
+            </dl>
+            <table class="sample-tests-table">
+                <thead>
+                    <tr>
+                        <th>{{ __('Code') }}</th>
+                        <th>{{ __('Test') }}</th>
+                        <th>{{ __('Source') }}</th>
+                        <th class="num">{{ __('Days') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($labSampleSlipLines as $slipLine)
+                        <tr>
+                            <td>{{ $slipLine['test_code'] }}</td>
+                            <td>{{ $slipLine['test_name'] }}</td>
+                            <td>{{ $slipLine['sourcing_label'] }}</td>
+                            <td class="num">{{ $slipLine['days_required'] }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </section>
+    @endif
 
     <script>
         window.addEventListener('load', function () {

@@ -51,6 +51,7 @@ test('admin can access settings crud pages', function () {
     $this->get(route('admin.users'))->assertOk();
     $this->get(route('admin.lab-api-logs'))->assertOk();
     $this->get(route('admin.queue-insights'))->assertOk();
+    $this->get(route('admin.appointment-contacts'))->assertOk();
 
     $shiftOpener = User::factory()->create();
     $shift = Shift::create([

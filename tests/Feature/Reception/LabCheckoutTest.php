@@ -71,6 +71,7 @@ test('staff can checkout lab tests with 0, 50, and 100 percent discount', functi
 
     expect($invoice)->not->toBeNull()
         ->and($invoice->kind)->toBe(InvoiceKind::Lab)
+        ->and((int) $invoice->lab_sample_slip_serial)->toBe(1)
         ->and($invoice->status)->toBe(InvoiceStatus::Paid)
         ->and((int) $invoice->total_amount)->toBe(1500)
         ->and((int) $invoice->discount)->toBe($expectedDiscount)
@@ -184,13 +185,78 @@ test('staff can print a lab invoice and see test codes', function () {
         ->assertHasNoErrors();
 
     $invoice = Invoice::query()->latest('id')->first();
-    expect($invoice)->not->toBeNull();
+    expect($invoice)->not->toBeNull()
+        ->and((int) $invoice->lab_sample_slip_serial)->toBe(1);
 
     $response = $this->actingAs($staff)->get(route('invoices.print', $invoice));
 
     $response->assertOk();
     $response->assertSee('PRINT-99', false);
     $response->assertSee('Vitamin D', false);
+    $response->assertSee('Sample serial', false);
+    $response->assertSee(number_format((int) $invoice->lab_sample_slip_serial), false);
+    $response->assertSee('Lab sample slip', false);
+});
+
+test('lab sample slip serial increments for each new lab invoice', function () {
+    $staff = User::factory()->create(['role' => UserRole::Staff]);
+
+    Shift::query()->create([
+        'opened_by' => $staff->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+
+    $family = Family::query()->create(['phone' => '03005556677']);
+    $patient = Patient::query()->create([
+        'family_id' => $family->id,
+        'name' => 'Serial Patient',
+        'gender' => 'male',
+        'type' => PatientType::Head,
+        'relation_to_head' => null,
+    ]);
+    $family->update(['head_id' => $patient->id]);
+
+    $ltA = LabTest::factory()->create([
+        'test_code' => 'SER-A',
+        'price' => 100,
+        'hospital_share' => 50,
+        'lab_share' => 50,
+    ]);
+    $ltB = LabTest::factory()->create([
+        'test_code' => 'SER-B',
+        'price' => 200,
+        'hospital_share' => 50,
+        'lab_share' => 50,
+    ]);
+
+    $component = Livewire::actingAs($staff)
+        ->test('pages::reception.lab')
+        ->set('phoneQuery', '03005556677')
+        ->call('lookupPhone')
+        ->set('selectedPatientId', $patient->id)
+        ->set('patientAge', 30)
+        ->set('patientAgeUnit', 'year')
+        ->set('selectedTestIds', [$ltA->id])
+        ->set('discountPercent', 0)
+        ->call('createAndPrint')
+        ->assertHasNoErrors();
+
+    $first = Invoice::query()->latest('id')->first();
+    expect($first)->not->toBeNull()
+        ->and((int) $first->lab_sample_slip_serial)->toBe(1);
+
+    $component
+        ->set('selectedTestIds', [$ltB->id])
+        ->set('discountPercent', 0)
+        ->call('createAndPrint')
+        ->assertHasNoErrors();
+
+    $second = Invoice::query()->latest('id')->first();
+    expect($second)->not->toBeNull()
+        ->and((int) $second->lab_sample_slip_serial)->toBe(2)
+        ->and($second->id)->not->toBe($first->id);
 });
 
 test('lab checkout requires patient age before creating an invoice', function () {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\InvoiceKind;
+use App\Enums\LabTestSourcing;
 use App\Enums\UserRole;
 use App\Models\Invoice;
 use App\Models\VisitService;
@@ -97,6 +98,21 @@ class InvoicePrintController extends Controller
             $labCaseQrDataUri = LabPortalQrDataUri::fromUrl($labCaseInvoiceUrl);
         }
 
+        $labSampleSlipLines = collect();
+        if ($invoice->kind === InvoiceKind::Lab && filled($invoice->lab_sample_slip_serial)) {
+            $labSampleSlipLines = $invoice->labTests->sortBy('id')->values()->map(function ($line) {
+                return [
+                    'test_code' => (string) $line->test_code,
+                    'test_name' => (string) $line->test_name,
+                    'sourcing_label' => match ($line->sourcing) {
+                        LabTestSourcing::InHouse => __('In-house'),
+                        LabTestSourcing::Outsourced => __('Outsourced'),
+                    },
+                    'days_required' => (int) $line->days_required,
+                ];
+            });
+        }
+
         return view('invoices.print', [
             'clinicName' => config('hms.clinic_name', 'MMC'),
             'invoice' => $invoice,
@@ -109,6 +125,7 @@ class InvoicePrintController extends Controller
             'isProcedureInvoice' => $invoice->kind === InvoiceKind::Procedure,
             'labCaseInvoiceUrl' => $labCaseInvoiceUrl,
             'labCaseQrDataUri' => $labCaseQrDataUri,
+            'labSampleSlipLines' => $labSampleSlipLines,
         ]);
     }
 }

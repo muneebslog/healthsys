@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Invoice extends Model
 {
     protected $fillable = [
-        'visit_id', 'patient_id', 'shift_id', 'procedure_id', 'kind', 'total_amount', 'discount', 'discount_percent', 'final_amount', 'status', 'payment_note', 'lab_case_invoice_url',
+        'visit_id', 'patient_id', 'shift_id', 'procedure_id', 'kind', 'total_amount', 'discount', 'discount_percent', 'final_amount', 'status', 'payment_note', 'lab_case_invoice_url', 'lab_sample_slip_serial',
     ];
 
     protected function casts(): array

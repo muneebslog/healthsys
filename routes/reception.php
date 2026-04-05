@@ -14,6 +14,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('reception/procedures', 'pages::reception.procedures')->name('reception.procedures');
     Route::livewire('reception/procedures/{procedure}', 'pages::reception.procedure-show')->name('reception.procedures.show');
     Route::livewire('reception/appointments', 'pages::reception.appointments')->name('reception.appointments');
+    Route::livewire('reception/invoice-lookup', 'pages::reception.invoice-lookup')->name('reception.invoice-lookup');
     Route::livewire('reception/doctor-share-out', 'pages::reception.doctor-share-out')->name('reception.doctor-share-out');
     Route::get('reception/doctor-share-ledger/{ledger}/payout-receipt', DoctorSharePayoutReceiptPrintController::class)
         ->name('reception.doctor-share-payout-receipt');
