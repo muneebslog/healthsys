@@ -4,6 +4,7 @@ use App\Enums\QueueResetType;
 use App\Enums\QueueStatus;
 use App\Enums\QueueTokenStatus;
 use App\Enums\ShiftStatus;
+use App\Enums\UserRole;
 use App\Livewire\QueueControl;
 use App\Models\Doctor;
 use App\Models\Queue;
@@ -104,6 +105,121 @@ it('call next promotes a waiting token via queue control', function () {
         ->assertHasNoErrors();
 
     expect(QueueToken::query()->where('queue_id', $queue->id)->where('status', QueueTokenStatus::Serving)->value('token_number'))->toBe(1);
+});
+
+it('admin can close a queue and is redirected without creating another active queue', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $shift = Shift::create([
+        'opened_by' => $admin->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+    $service = Service::create([
+        'name' => 'Consultation',
+        'is_standalone' => false,
+        'reset_type' => QueueResetType::PerShift,
+        'is_active' => true,
+    ]);
+    $doctor = Doctor::create([
+        'name' => 'Dr. Close',
+        'specialization' => null,
+        'phone' => null,
+        'status' => 'active',
+        'is_on_payroll' => false,
+        'user_id' => null,
+    ]);
+    $queue = Queue::create([
+        'service_id' => $service->id,
+        'doctor_id' => $doctor->id,
+        'shift_id' => $shift->id,
+        'status' => QueueStatus::Active,
+        'current_token' => 0,
+        'current_flow_token' => 0,
+        'closed_at' => null,
+    ]);
+
+    Livewire::actingAs($admin)
+        ->test(QueueControl::class, ['queue' => $queue])
+        ->call('confirmCloseQueue')
+        ->assertRedirect(route('queues.index'));
+
+    $queue->refresh();
+    expect($queue->closed_at)->not->toBeNull()
+        ->and($queue->status)->toBe(QueueStatus::Closed);
+
+    expect(
+        Queue::query()
+            ->active()
+            ->where('service_id', $service->id)
+            ->where('doctor_id', $doctor->id)
+            ->where('shift_id', $shift->id)
+            ->count()
+    )->toBe(0);
+});
+
+it('staff cannot close a queue from queue control', function () {
+    $staff = User::factory()->create(['role' => UserRole::Staff]);
+    $shift = Shift::create([
+        'opened_by' => $staff->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+    $service = Service::create([
+        'name' => 'Consultation',
+        'is_standalone' => false,
+        'reset_type' => QueueResetType::Daily,
+        'is_active' => true,
+    ]);
+    $queue = Queue::create([
+        'service_id' => $service->id,
+        'doctor_id' => null,
+        'shift_id' => $shift->id,
+        'status' => QueueStatus::Active,
+        'current_token' => 0,
+        'current_flow_token' => 0,
+        'closed_at' => null,
+    ]);
+
+    Livewire::actingAs($staff)
+        ->test(QueueControl::class, ['queue' => $queue])
+        ->assertDontSee(__('Close queue'))
+        ->call('confirmCloseQueue')
+        ->assertHasErrors(['control']);
+
+    expect($queue->fresh()->closed_at)->toBeNull();
+});
+
+it('shows daily queue warning in the close modal for admin', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $shift = Shift::create([
+        'opened_by' => $admin->id,
+        'opening_balance' => 0,
+        'status' => ShiftStatus::Open,
+        'opened_at' => now(),
+    ]);
+    $service = Service::create([
+        'name' => 'Daily OPD',
+        'is_standalone' => false,
+        'reset_type' => QueueResetType::Daily,
+        'is_active' => true,
+    ]);
+    $queue = Queue::create([
+        'service_id' => $service->id,
+        'doctor_id' => null,
+        'shift_id' => $shift->id,
+        'status' => QueueStatus::Active,
+        'current_token' => 0,
+        'current_flow_token' => 0,
+        'closed_at' => null,
+    ]);
+
+    Livewire::actingAs($admin)
+        ->test(QueueControl::class, ['queue' => $queue])
+        ->call('openCloseQueueModal')
+        ->assertSet('showCloseQueueModal', true)
+        ->assertSee(__('Daily queue service'));
 });
 
 it('returns 404 when controlling an inactive queue over http', function () {

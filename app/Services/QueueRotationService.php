@@ -12,18 +12,19 @@ use RuntimeException;
 class QueueRotationService
 {
     /**
-     * Close the active queue and open a fresh one for the same shift, service, and doctor.
+     * Close the active queue. A new queue for the same service, doctor, and shift is created
+     * automatically the next time a walk-in or appointment reserves a token.
      *
      * Tokens (including reserved appointments) remain on the closed queue; only the
      * currently serving token, if any, is marked done.
      */
-    public function endCurrentAndStartNew(Queue $queue): Queue
+    public function closeActive(Queue $queue): void
     {
         if (! $queue->isActive()) {
             throw new RuntimeException(__('This queue is no longer active.'));
         }
 
-        return DB::transaction(function () use ($queue): Queue {
+        DB::transaction(function () use ($queue): void {
             $locked = Queue::query()->lockForUpdate()->findOrFail($queue->id);
 
             if (! $locked->isActive()) {
@@ -46,12 +47,6 @@ class QueueRotationService
                 'status' => QueueStatus::Closed,
                 'closed_at' => now(),
             ])->save();
-
-            return Queue::findOrCreateActiveForShift(
-                (int) $locked->service_id,
-                $locked->doctor_id,
-                (int) $locked->shift_id
-            );
         });
     }
 }

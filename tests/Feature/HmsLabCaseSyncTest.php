@@ -159,8 +159,8 @@ it('posts a lab case to the external HMS after checkout when the token is config
     $this->actingAs($staff)
         ->get(route('invoices.print', $invoice))
         ->assertOk()
-        ->assertSee('create-qr-code', false)
-        ->assertSee(rawurlencode('https://lab.mohsinmedicalcomplex.com/invoice/1'), false);
+        ->assertSee('data:image/svg+xml;base64,', false)
+        ->assertSee('https://lab.mohsinmedicalcomplex.com/invoice/1', false);
 });
 
 it('maps non-binary patient gender using the configured fallback for the external API', function () {

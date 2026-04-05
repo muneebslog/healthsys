@@ -304,13 +304,10 @@
         </div>
     @endif
 
-    @if (! empty($labCaseInvoiceUrl ?? null))
-        @php
-            $labQrSrc = (string) config('hms.lab_cases.qr_code_image_base_url').rawurlencode($labCaseInvoiceUrl);
-        @endphp
+    @if (! empty($labCaseQrDataUri ?? null) && ! empty($labCaseInvoiceUrl ?? null))
         <div class="lab-qr-block">
             <div class="lab-qr-caption">{{ __('Lab portal') }}</div>
-            <img src="{{ $labQrSrc }}" width="120" height="120" alt="{{ __('QR code') }}" />
+            <img src="{{ $labCaseQrDataUri }}" width="120" height="120" alt="{{ __('QR code') }}" />
             <div class="lab-qr-url">{{ $labCaseInvoiceUrl }}</div>
         </div>
     @endif

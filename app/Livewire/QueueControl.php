@@ -21,7 +21,7 @@ class QueueControl extends Component
 
     public string $activeTab = 'waiting';
 
-    public bool $showEndQueueModal = false;
+    public bool $showCloseQueueModal = false;
 
     public function mount(Queue $queue): void
     {
@@ -115,38 +115,38 @@ class QueueControl extends Component
         $this->bumpQueue();
     }
 
-    public function openEndQueueModal(): void
+    public function openCloseQueueModal(): void
     {
-        if (! $this->canEndAndRotateQueue) {
+        if (! $this->canCloseQueue) {
             return;
         }
 
-        $this->showEndQueueModal = true;
+        $this->showCloseQueueModal = true;
     }
 
-    public function confirmEndQueue(QueueRotationService $rotation): void
+    public function confirmCloseQueue(QueueRotationService $rotation): void
     {
         $this->resetErrorBag();
 
-        if (! $this->canEndAndRotateQueue) {
-            $this->addError('control', __('Only administrators can end and replace a queue.'));
-            $this->showEndQueueModal = false;
+        if (! $this->canCloseQueue) {
+            $this->addError('control', __('Only administrators can close a queue.'));
+            $this->showCloseQueueModal = false;
 
             return;
         }
 
         try {
-            $newQueue = $rotation->endCurrentAndStartNew($this->queue);
+            $rotation->closeActive($this->queue);
         } catch (RuntimeException $e) {
             $this->addError('control', $e->getMessage());
-            $this->showEndQueueModal = false;
+            $this->showCloseQueueModal = false;
 
             return;
         }
 
-        $this->showEndQueueModal = false;
+        $this->showCloseQueueModal = false;
 
-        $this->redirect(route('queues.control', $newQueue), navigate: true);
+        $this->redirect(route('queues.index'), navigate: true);
     }
 
     public function requeue(int $tokenId, QueueCallingService $queueCalling): void
@@ -237,7 +237,7 @@ class QueueControl extends Component
     }
 
     #[Computed]
-    public function canEndAndRotateQueue(): bool
+    public function canCloseQueue(): bool
     {
         return Auth::user()->role === UserRole::Admin;
     }

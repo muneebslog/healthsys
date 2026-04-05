@@ -6,6 +6,7 @@ use App\Enums\InvoiceKind;
 use App\Enums\UserRole;
 use App\Models\Invoice;
 use App\Models\VisitService;
+use App\Support\LabPortalQrDataUri;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -90,8 +91,10 @@ class InvoicePrintController extends Controller
         }
 
         $labCaseInvoiceUrl = null;
+        $labCaseQrDataUri = null;
         if ($invoice->kind === InvoiceKind::Lab && filled($invoice->lab_case_invoice_url)) {
             $labCaseInvoiceUrl = (string) $invoice->lab_case_invoice_url;
+            $labCaseQrDataUri = LabPortalQrDataUri::fromUrl($labCaseInvoiceUrl);
         }
 
         return view('invoices.print', [
@@ -105,6 +108,7 @@ class InvoicePrintController extends Controller
             'isLabInvoice' => $invoice->kind === InvoiceKind::Lab,
             'isProcedureInvoice' => $invoice->kind === InvoiceKind::Procedure,
             'labCaseInvoiceUrl' => $labCaseInvoiceUrl,
+            'labCaseQrDataUri' => $labCaseQrDataUri,
         ]);
     }
 }

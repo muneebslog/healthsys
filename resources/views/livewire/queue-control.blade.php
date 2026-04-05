@@ -60,6 +60,11 @@
                         <span wire:loading wire:target="skip">…</span>
                     </flux:button>
                 </div>
+                @if ($this->canCloseQueue)
+                    <flux:button variant="outline" icon="x-circle" class="min-h-12 w-full border-rose-200 text-rose-800 hover:bg-rose-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/40" wire:click="openCloseQueueModal">
+                        {{ __('Close queue') }}
+                    </flux:button>
+                @endif
             </div>
         </div>
     </header>
@@ -154,4 +159,40 @@
             </ul>
         </div>
     </section>
+
+    @if ($this->canCloseQueue)
+        <flux:modal wire:model="showCloseQueueModal" name="close-queue" class="min-w-[22rem] max-w-lg">
+            <div class="space-y-4">
+                <flux:heading size="lg">{{ __('Close this queue?') }}</flux:heading>
+                <flux:text class="text-zinc-600 dark:text-zinc-400">
+                    {{ __('This stops token calling for this line. A new queue for the same service will appear automatically when the next walk-in checks in or an appointment reserves a token—nothing is created right now.') }}
+                </flux:text>
+                @if ($this->isDailyResetService)
+                    <flux:callout color="amber" icon="exclamation-triangle">
+                        <div class="text-sm font-semibold text-zinc-900 dark:text-white">{{ __('Daily queue service') }}</div>
+                        <flux:text class="mt-1 text-zinc-600 dark:text-zinc-400">
+                            {{ __('This service uses a daily queue. Reserved appointments and token numbers on this closed queue stay on the closed record; new check-ins start a fresh queue. Only close if you understand today\'s appointments and displays.') }}
+                        </flux:text>
+                    </flux:callout>
+                @endif
+                <ul class="space-y-1 rounded-xl bg-zinc-50 p-4 text-sm dark:bg-zinc-800/50">
+                    <li class="flex justify-between gap-4">
+                        <span class="text-zinc-500">{{ __('Waiting') }}</span>
+                        <span class="tabular-nums font-medium text-zinc-900 dark:text-white">{{ $this->waitingTokens->count() }}</span>
+                    </li>
+                    <li class="flex justify-between gap-4">
+                        <span class="text-zinc-500">{{ __('Reserved (appointments)') }}</span>
+                        <span class="tabular-nums font-medium text-zinc-900 dark:text-white">{{ $this->reservedTokensCount }}</span>
+                    </li>
+                </ul>
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <flux:button variant="ghost" wire:click="$set('showCloseQueueModal', false)">{{ __('Cancel') }}</flux:button>
+                    <flux:button variant="danger" wire:click="confirmCloseQueue" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="confirmCloseQueue">{{ __('Close queue') }}</span>
+                        <span wire:loading wire:target="confirmCloseQueue">{{ __('Closing…') }}</span>
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
+    @endif
 </div>
