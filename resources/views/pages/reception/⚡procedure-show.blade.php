@@ -1,14 +1,17 @@
 <?php
 
 use App\Enums\InvoiceStatus;
+use App\Enums\ProcedureStatus;
 use App\Enums\ShiftStatus;
 use App\Enums\UserRole;
 use App\Models\Procedure;
 use App\Models\Shift;
 use App\Services\ProcedurePaymentRecorder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Js;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -22,6 +25,14 @@ new #[Title('Procedure detail')] class extends Component
     public string $paymentAmount = '';
 
     public string $paymentNote = '';
+
+    public bool $showPackagePriceModal = false;
+
+    public string $caseStatus = '';
+
+    public string $admissionInput = '';
+
+    public string $dischargeInput = '';
 
     public function mount(Procedure $procedure): void
     {
@@ -40,6 +51,64 @@ new #[Title('Procedure detail')] class extends Component
         ]);
 
         $this->packagePriceInput = (string) $this->procedure->package_price;
+        $this->syncCaseFormFromProcedure();
+    }
+
+    public function openPackagePriceModal(): void
+    {
+        $this->packagePriceInput = (string) $this->procedure->package_price;
+        $this->resetValidation('packagePriceInput');
+        $this->showPackagePriceModal = true;
+    }
+
+    protected function syncCaseFormFromProcedure(): void
+    {
+        $this->caseStatus = $this->procedure->status->value;
+        $tz = config('app.timezone');
+        $this->admissionInput = $this->procedure->admission_at
+            ? $this->procedure->admission_at->timezone($tz)->format('Y-m-d\TH:i')
+            : '';
+        $this->dischargeInput = $this->procedure->discharge_at
+            ? $this->procedure->discharge_at->timezone($tz)->format('Y-m-d\TH:i')
+            : '';
+    }
+
+    public function saveCaseProgress(): void
+    {
+        Gate::authorize('update', $this->procedure);
+
+        $validated = $this->validate([
+            'caseStatus' => ['required', Rule::enum(ProcedureStatus::class)],
+            'admissionInput' => ['nullable', 'date'],
+            'dischargeInput' => ['nullable', 'date'],
+        ], [], [
+            'caseStatus' => __('status'),
+            'admissionInput' => __('admission'),
+            'dischargeInput' => __('discharge'),
+        ]);
+
+        $tz = config('app.timezone');
+        $admission = filled($validated['admissionInput'])
+            ? Carbon::parse($validated['admissionInput'], $tz)
+            : null;
+        $discharge = filled($validated['dischargeInput'])
+            ? Carbon::parse($validated['dischargeInput'], $tz)
+            : null;
+
+        if ($admission && $discharge && $discharge->lt($admission)) {
+            $this->addError('dischargeInput', __('Discharge must be on or after admission.'));
+
+            return;
+        }
+
+        $this->procedure->update([
+            'status' => ProcedureStatus::from($validated['caseStatus']),
+            'admission_at' => $admission,
+            'discharge_at' => $discharge,
+        ]);
+
+        $this->procedure->refresh();
+        $this->syncCaseFormFromProcedure();
     }
 
     #[Computed]
@@ -84,6 +153,7 @@ new #[Title('Procedure detail')] class extends Component
 
         $this->procedure->refresh();
         $this->packagePriceInput = (string) $this->procedure->package_price;
+        $this->showPackagePriceModal = false;
         unset($this->totalPaid, $this->balance, $this->isOverpaid);
     }
 
@@ -146,7 +216,7 @@ new #[Title('Procedure detail')] class extends Component
         <div class="relative flex flex-col gap-2">
             <div class="flex flex-wrap items-center gap-2">
                 <flux:badge color="zinc">{{ $p->reference_number }}</flux:badge>
-                <flux:badge color="cyan">{{ $p->status->value }}</flux:badge>
+                <flux:badge color="cyan">{{ \Illuminate\Support\Str::headline($p->status->value) }}</flux:badge>
             </div>
             <flux:heading size="xl" class="text-zinc-900 dark:text-white">{{ $p->operation_name }}</flux:heading>
             <flux:text class="text-zinc-600 dark:text-zinc-400">
@@ -165,35 +235,25 @@ new #[Title('Procedure detail')] class extends Component
     @endif
 
     <div class="grid gap-6 lg:grid-cols-3">
-        <flux:card class="p-6 lg:col-span-1">
+        <flux:card class="p-6 lg:col-span-3">
             <flux:heading size="md" class="mb-4">{{ __('Financial summary') }}</flux:heading>
-            <dl class="space-y-3 text-sm">
-                <div class="flex justify-between gap-4">
-                    <dt class="text-zinc-500">{{ __('Package price') }}</dt>
-                    <dd class="tabular-nums font-semibold text-zinc-900 dark:text-white">{{ $this->formatMoney((int) $p->package_price) }}</dd>
-                </div>
-                <div class="flex justify-between gap-4">
-                    <dt class="text-zinc-500">{{ __('Total paid') }}</dt>
-                    <dd class="tabular-nums font-medium text-teal-700 dark:text-teal-300">{{ $this->formatMoney($this->totalPaid) }}</dd>
-                </div>
-                <div class="flex justify-between gap-4 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-                    <dt class="text-zinc-500">{{ __('Balance') }}</dt>
-                    <dd class="tabular-nums font-bold text-amber-800 dark:text-amber-200">{{ $this->formatMoney($this->balance) }}</dd>
-                </div>
-            </dl>
-        </flux:card>
-
-        <flux:card class="space-y-4 p-6 lg:col-span-2">
-            <flux:heading size="md">{{ __('Edit package price') }}</flux:heading>
-            <flux:text class="text-sm text-zinc-500">{{ __('Change the agreed package anytime; balances update automatically.') }}</flux:text>
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <flux:field class="sm:flex-1">
-                    <flux:label>{{ __('Package price') }}</flux:label>
-                    <flux:input type="number" wire:model="packagePriceInput" min="1" />
-                    <flux:error name="packagePriceInput" />
-                </flux:field>
-                <flux:button variant="primary" wire:click="savePackagePrice" wire:loading.attr="disabled">
-                    {{ __('Save') }}
+            <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <dl class="min-w-0 flex-1 space-y-3 text-sm">
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-zinc-500">{{ __('Package price') }}</dt>
+                        <dd class="tabular-nums font-semibold text-zinc-900 dark:text-white">{{ $this->formatMoney((int) $p->package_price) }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-zinc-500">{{ __('Total paid') }}</dt>
+                        <dd class="tabular-nums font-medium text-teal-700 dark:text-teal-300">{{ $this->formatMoney($this->totalPaid) }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-4 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                        <dt class="text-zinc-500">{{ __('Balance') }}</dt>
+                        <dd class="tabular-nums font-bold text-amber-800 dark:text-amber-200">{{ $this->formatMoney($this->balance) }}</dd>
+                    </div>
+                </dl>
+                <flux:button variant="outline" icon="pencil-square" wire:click="openPackagePriceModal" class="w-full shrink-0 lg:w-auto">
+                    {{ __('Change package price') }}
                 </flux:button>
             </div>
         </flux:card>
@@ -226,31 +286,48 @@ new #[Title('Procedure detail')] class extends Component
 
         <flux:card class="space-y-4 p-6">
             <flux:heading size="md">{{ __('Case details') }}</flux:heading>
-            <dl class="grid gap-2 text-sm">
-                @if ($p->procedure_date)
+            @if ($p->procedure_date)
+                <dl class="grid gap-2 text-sm">
                     <div class="flex justify-between gap-4">
                         <dt class="text-zinc-500">{{ __('Procedure date') }}</dt>
                         <dd class="text-zinc-900 dark:text-white">{{ $p->procedure_date->format('M j, Y') }}</dd>
                     </div>
-                @endif
-                @if ($p->admission_at)
-                    <div class="flex justify-between gap-4">
-                        <dt class="text-zinc-500">{{ __('Admission') }}</dt>
-                        <dd class="text-zinc-900 dark:text-white">{{ $p->admission_at->timezone(config('app.timezone'))->format('M j, Y g:i A') }}</dd>
-                    </div>
-                @endif
-                @if ($p->discharge_at)
-                    <div class="flex justify-between gap-4">
-                        <dt class="text-zinc-500">{{ __('Discharge') }}</dt>
-                        <dd class="text-zinc-900 dark:text-white">{{ $p->discharge_at->timezone(config('app.timezone'))->format('M j, Y g:i A') }}</dd>
-                    </div>
-                @endif
-                @if (filled($p->notes))
-                    <div class="mt-2 rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-300">
-                        {{ $p->notes }}
-                    </div>
-                @endif
-            </dl>
+                </dl>
+            @endif
+
+            <div @class(['space-y-4', 'border-t border-zinc-100 pt-4 dark:border-zinc-800' => $p->procedure_date])>
+                <flux:field>
+                    <flux:label>{{ __('Status') }}</flux:label>
+                    <flux:select wire:model="caseStatus">
+                        @foreach (\App\Enums\ProcedureStatus::cases() as $status)
+                            <flux:select.option value="{{ $status->value }}">{{ \Illuminate\Support\Str::headline($status->value) }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="caseStatus" />
+                </flux:field>
+                <flux:field>
+                    <flux:label>{{ __('Admission date & time') }}</flux:label>
+                    <flux:input type="datetime-local" wire:model="admissionInput" />
+                    <flux:description>{{ __('Leave empty until the patient is admitted.') }}</flux:description>
+                    <flux:error name="admissionInput" />
+                </flux:field>
+                <flux:field>
+                    <flux:label>{{ __('Discharge date & time') }}</flux:label>
+                    <flux:input type="datetime-local" wire:model="dischargeInput" />
+                    <flux:description>{{ __('Leave empty until discharged.') }}</flux:description>
+                    <flux:error name="dischargeInput" />
+                </flux:field>
+                <flux:button variant="primary" wire:click="saveCaseProgress" wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="saveCaseProgress">{{ __('Save case progress') }}</span>
+                    <span wire:loading wire:target="saveCaseProgress">{{ __('Saving…') }}</span>
+                </flux:button>
+            </div>
+
+            @if (filled($p->notes))
+                <div class="rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-300">
+                    {{ $p->notes }}
+                </div>
+            @endif
         </flux:card>
     </div>
 
@@ -291,4 +368,25 @@ new #[Title('Procedure detail')] class extends Component
             </div>
         @endif
     </flux:card>
+
+    <flux:modal wire:model="showPackagePriceModal" name="procedure-package-price" class="min-w-[20rem] max-w-md">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __('Change package price') }}</flux:heading>
+            <flux:callout variant="warning" icon="exclamation-triangle" heading="{{ __('Confirm before saving') }}">
+                {{ __('Changing the package price updates balances immediately. Lowering it after payments can make the case look overpaid—only continue if this is intentional.') }}
+            </flux:callout>
+            <flux:field>
+                <flux:label>{{ __('Package price') }}</flux:label>
+                <flux:input type="number" wire:model="packagePriceInput" min="1" />
+                <flux:error name="packagePriceInput" />
+            </flux:field>
+            <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <flux:button variant="ghost" wire:click="$set('showPackagePriceModal', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button variant="primary" wire:click="savePackagePrice" wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="savePackagePrice">{{ __('Save package price') }}</span>
+                    <span wire:loading wire:target="savePackagePrice">{{ __('Saving…') }}</span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
