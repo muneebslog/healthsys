@@ -97,6 +97,8 @@ final class HmsLabCaseSyncService
             $this->persistOutboundLabApiLog($invoiceId, $url, $payload, $response, null, $startedAt);
 
             if ($response->successful()) {
+                $this->storeLabCasePortalUrlFromResponse($invoiceId, $response);
+
                 return;
             }
 
@@ -195,6 +197,43 @@ final class HmsLabCaseSyncService
         }
 
         $payload['invoice_number'] = $referenceValue;
+    }
+
+    /**
+     * Persists the portal link returned by the lab API (e.g. `invoice_url`) on the local invoice for receipts.
+     */
+    private function storeLabCasePortalUrlFromResponse(int $invoiceId, Response $response): void
+    {
+        $url = $this->extractPortalUrlFromSuccessfulLabCaseBody($response);
+
+        if ($url === null) {
+            return;
+        }
+
+        Invoice::query()->whereKey($invoiceId)->update([
+            'lab_case_invoice_url' => $url,
+        ]);
+    }
+
+    private function extractPortalUrlFromSuccessfulLabCaseBody(Response $response): ?string
+    {
+        $json = $response->json();
+
+        if (! is_array($json)) {
+            return null;
+        }
+
+        foreach (['invoice_url', 'url', 'link'] as $key) {
+            $candidate = $json[$key] ?? null;
+            if (is_string($candidate)) {
+                $trimmed = trim($candidate);
+                if ($trimmed !== '' && filter_var($trimmed, FILTER_VALIDATE_URL) !== false) {
+                    return $trimmed;
+                }
+            }
+        }
+
+        return null;
     }
 
     private function logLabCaseHttpFailure(int $invoiceId, Response $response): void

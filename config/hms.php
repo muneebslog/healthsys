@@ -102,6 +102,14 @@ return [
 
             return $parsed !== [] ? $parsed : [500, 1500, 3000];
         })(),
+        /*
+        | Base URL for the QR image on lab receipts; `data=` query value is appended URL-encoded.
+        | Override with a self-hosted generator if you cannot use the default service.
+        */
+        'qr_code_image_base_url' => env(
+            'HMS_LAB_CASES_QR_IMAGE_BASE_URL',
+            'https://api.qrserver.com/v1/create-qr-code/?size=120x120&ecc=M&data='
+        ),
     ],
 
 ];

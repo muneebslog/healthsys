@@ -13,6 +13,14 @@ use App\Models\Shift;
 use App\Models\User;
 use Livewire\Livewire;
 
+test('lab checkout page defaults age unit to years', function () {
+    $staff = User::factory()->create(['role' => UserRole::Staff]);
+
+    Livewire::actingAs($staff)
+        ->test('pages::reception.lab')
+        ->assertSet('patientAgeUnit', 'year');
+});
+
 test('staff can checkout lab tests with 0, 50, and 100 percent discount', function (int $discountPercent, int $expectedDiscount, int $expectedFinal) {
     $staff = User::factory()->create(['role' => UserRole::Staff]);
 

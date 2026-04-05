@@ -681,9 +681,12 @@ new #[Title('Lab checkout')] class extends Component
                                 </flux:field>
                                 <flux:field>
                                     <flux:label>{{ __('Unit') }}</flux:label>
-                                    <flux:select wire:model.live="patientAgeUnit">
-                                        <flux:select.option value="year">{{ __('Years') }}</flux:select.option>
-                                        <flux:select.option value="month">{{ __('Months') }}</flux:select.option>
+                                    <flux:select
+                                        wire:key="lab-patient-age-unit-{{ $selectedPatientId }}"
+                                        wire:model.live="patientAgeUnit"
+                                    >
+                                        <flux:select.option value="year" :selected="$patientAgeUnit === 'year'">{{ __('Years') }}</flux:select.option>
+                                        <flux:select.option value="month" :selected="$patientAgeUnit === 'month'">{{ __('Months') }}</flux:select.option>
                                     </flux:select>
                                     <flux:error name="patientAgeUnit" />
                                 </flux:field>

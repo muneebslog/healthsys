@@ -167,6 +167,33 @@
             font-weight: 600;
             color: #333;
         }
+        .lab-qr-block {
+            text-align: center;
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px dashed #bbb;
+        }
+        .lab-qr-block img {
+            display: block;
+            margin: 0 auto 6px;
+            width: 120px;
+            height: 120px;
+            image-rendering: pixelated;
+        }
+        .lab-qr-caption {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #444;
+            margin-bottom: 4px;
+        }
+        .lab-qr-url {
+            font-size: 8px;
+            line-height: 1.3;
+            word-break: break-all;
+            color: #333;
+        }
         @media print {
             body { padding: 4px 6px; max-width: none; }
         }
@@ -274,6 +301,17 @@
             @for ($i = 0; $i < 8; $i++)
                 <div class="rx-line"></div>
             @endfor
+        </div>
+    @endif
+
+    @if (! empty($labCaseInvoiceUrl ?? null))
+        @php
+            $labQrSrc = (string) config('hms.lab_cases.qr_code_image_base_url').rawurlencode($labCaseInvoiceUrl);
+        @endphp
+        <div class="lab-qr-block">
+            <div class="lab-qr-caption">{{ __('Lab portal') }}</div>
+            <img src="{{ $labQrSrc }}" width="120" height="120" alt="{{ __('QR code') }}" />
+            <div class="lab-qr-url">{{ $labCaseInvoiceUrl }}</div>
         </div>
     @endif
 

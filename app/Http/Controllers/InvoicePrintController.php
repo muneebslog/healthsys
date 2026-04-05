@@ -89,6 +89,11 @@ class InvoicePrintController extends Controller
             );
         }
 
+        $labCaseInvoiceUrl = null;
+        if ($invoice->kind === InvoiceKind::Lab && filled($invoice->lab_case_invoice_url)) {
+            $labCaseInvoiceUrl = (string) $invoice->lab_case_invoice_url;
+        }
+
         return view('invoices.print', [
             'clinicName' => config('hms.clinic_name', 'MMC'),
             'invoice' => $invoice,
@@ -99,6 +104,7 @@ class InvoicePrintController extends Controller
             'showRxHandwritingBlock' => $showRxHandwritingBlock,
             'isLabInvoice' => $invoice->kind === InvoiceKind::Lab,
             'isProcedureInvoice' => $invoice->kind === InvoiceKind::Procedure,
+            'labCaseInvoiceUrl' => $labCaseInvoiceUrl,
         ]);
     }
 }

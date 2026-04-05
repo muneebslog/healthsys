@@ -2,11 +2,13 @@
 
 namespace App\Livewire;
 
+use App\Enums\QueueResetType;
 use App\Enums\QueueTokenStatus;
 use App\Enums\UserRole;
 use App\Models\Queue;
 use App\Models\QueueToken;
 use App\Services\QueueCallingService;
+use App\Services\QueueRotationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -18,6 +20,8 @@ class QueueControl extends Component
     public Queue $queue;
 
     public string $activeTab = 'waiting';
+
+    public bool $showEndQueueModal = false;
 
     public function mount(Queue $queue): void
     {
@@ -45,7 +49,16 @@ class QueueControl extends Component
         }
 
         $this->queue = $fresh;
-        unset($this->servingToken, $this->waitingTokens, $this->allTokens, $this->skippedTokens, $this->skippedCount, $this->doneCount);
+        unset(
+            $this->servingToken,
+            $this->waitingTokens,
+            $this->allTokens,
+            $this->skippedTokens,
+            $this->skippedCount,
+            $this->doneCount,
+            $this->reservedTokensCount,
+            $this->isDailyResetService,
+        );
     }
 
     public function setTab(string $tab): void
@@ -100,6 +113,40 @@ class QueueControl extends Component
         }
 
         $this->bumpQueue();
+    }
+
+    public function openEndQueueModal(): void
+    {
+        if (! $this->canEndAndRotateQueue) {
+            return;
+        }
+
+        $this->showEndQueueModal = true;
+    }
+
+    public function confirmEndQueue(QueueRotationService $rotation): void
+    {
+        $this->resetErrorBag();
+
+        if (! $this->canEndAndRotateQueue) {
+            $this->addError('control', __('Only administrators can end and replace a queue.'));
+            $this->showEndQueueModal = false;
+
+            return;
+        }
+
+        try {
+            $newQueue = $rotation->endCurrentAndStartNew($this->queue);
+        } catch (RuntimeException $e) {
+            $this->addError('control', $e->getMessage());
+            $this->showEndQueueModal = false;
+
+            return;
+        }
+
+        $this->showEndQueueModal = false;
+
+        $this->redirect(route('queues.control', $newQueue), navigate: true);
     }
 
     public function requeue(int $tokenId, QueueCallingService $queueCalling): void
@@ -189,6 +236,27 @@ class QueueControl extends Component
             ->count();
     }
 
+    #[Computed]
+    public function canEndAndRotateQueue(): bool
+    {
+        return Auth::user()->role === UserRole::Admin;
+    }
+
+    #[Computed]
+    public function isDailyResetService(): bool
+    {
+        return $this->queue->service?->reset_type === QueueResetType::Daily;
+    }
+
+    #[Computed]
+    public function reservedTokensCount(): int
+    {
+        return (int) QueueToken::query()
+            ->where('queue_id', $this->queue->id)
+            ->where('status', QueueTokenStatus::Reserved)
+            ->count();
+    }
+
     public function render(): View
     {
         $this->queue->loadMissing(['service', 'doctor']);
@@ -221,7 +289,15 @@ class QueueControl extends Component
 
     private function bumpQueue(): void
     {
-        unset($this->servingToken, $this->waitingTokens, $this->allTokens, $this->skippedTokens, $this->skippedCount, $this->doneCount);
+        unset(
+            $this->servingToken,
+            $this->waitingTokens,
+            $this->allTokens,
+            $this->skippedTokens,
+            $this->skippedCount,
+            $this->doneCount,
+            $this->reservedTokensCount,
+        );
         $this->queue->refresh();
     }
 }

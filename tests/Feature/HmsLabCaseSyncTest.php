@@ -120,7 +120,8 @@ it('posts a lab case to the external HMS after checkout when the token is config
 
     $invoice = Invoice::query()->where('kind', InvoiceKind::Lab)->latest('id')->first();
 
-    expect($invoice)->not->toBeNull();
+    expect($invoice)->not->toBeNull()
+        ->and($invoice->lab_case_invoice_url)->toBe('https://lab.mohsinmedicalcomplex.com/invoice/1');
 
     Http::assertSent(function ($request) use ($invoice) {
         $auth = $request->header('Authorization')[0] ?? '';
@@ -154,6 +155,12 @@ it('posts a lab case to the external HMS after checkout when the token is config
     $patient->refresh();
     expect($patient->age)->toBe(30)
         ->and($patient->age_unit)->toBe('year');
+
+    $this->actingAs($staff)
+        ->get(route('invoices.print', $invoice))
+        ->assertOk()
+        ->assertSee('create-qr-code', false)
+        ->assertSee(rawurlencode('https://lab.mohsinmedicalcomplex.com/invoice/1'), false);
 });
 
 it('maps non-binary patient gender using the configured fallback for the external API', function () {
