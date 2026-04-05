@@ -26,11 +26,16 @@
         }
         .meta {
             text-align: center;
-            font-size: 10px;
-            color: #333;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.45;
+            color: #000;
             margin-bottom: 10px;
         }
-        .meta strong { font-weight: 700; }
+        .meta strong {
+            font-weight: 800;
+            font-size: 13px;
+        }
         .patient-block {
             text-align: center;
             margin: 12px 0 14px;
@@ -221,9 +226,9 @@
             margin-bottom: 4px;
         }
         .sample-serial-num {
-            font-size: 30px;
-            font-weight: 900;
-            line-height: 1;
+            font-size: 19px;
+            font-weight: 800;
+            line-height: 1.1;
             letter-spacing: -0.02em;
             font-variant-numeric: tabular-nums;
         }
@@ -276,7 +281,7 @@
     <div class="clinic">{{ $clinicName }}</div>
     <div class="meta">
         <strong>{{ __('Invoice') }} #{{ $invoice->id }}</strong><br>
-        {{ $printedAt->format('d M Y') }} · {{ $printedAt->format('g:i A') }}
+        <strong>{{ $printedAt->format('d M Y') }} · {{ $printedAt->format('g:i A') }}</strong>
     </div>
 
     @php
@@ -404,8 +409,8 @@
             <div class="sample-slip-title">{{ __('Lab sample slip') }}</div>
             <div class="sample-slip-sub">{{ __('Attach to specimen — no pricing') }}</div>
             <div class="meta" style="margin-bottom: 8px;">
-                {{ $printedAt->format('d M Y') }} · {{ $printedAt->format('g:i A') }}<br>
-                <strong>{{ __('Receipt ref.') }}</strong> #{{ $invoice->id }}
+                <strong>{{ $printedAt->format('d M Y') }} · {{ $printedAt->format('g:i A') }}</strong><br>
+                <strong>{{ __('Receipt ref.') }} #{{ $invoice->id }}</strong>
             </div>
             <div class="sample-serial-wrap">
                 <div class="sample-serial-label">{{ __('Sample serial') }}</div>
