@@ -40,6 +40,14 @@ test('staff cannot access admin lab API log', function () {
         ->assertForbidden();
 });
 
+test('staff cannot access admin application log', function () {
+    $user = User::factory()->create(['role' => UserRole::Staff]);
+
+    $this->actingAs($user)
+        ->get(route('admin.application-logs'))
+        ->assertForbidden();
+});
+
 test('admin can access settings crud pages', function () {
     $user = User::factory()->create(['role' => UserRole::Admin]);
 
@@ -50,6 +58,7 @@ test('admin can access settings crud pages', function () {
     $this->get(route('admin.service-prices'))->assertOk();
     $this->get(route('admin.users'))->assertOk();
     $this->get(route('admin.lab-api-logs'))->assertOk();
+    $this->get(route('admin.application-logs'))->assertOk();
     $this->get(route('admin.queue-insights'))->assertOk();
     $this->get(route('admin.appointment-contacts'))->assertOk();
 

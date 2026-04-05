@@ -21,6 +21,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Admin application log viewer (storage/logs)
+    |--------------------------------------------------------------------------
+    |
+    | Maximum bytes read from the end of each log file. Parsing very large files
+    | in PHP is memory-heavy; raise only if you need older lines inside huge logs.
+    |
+    */
+    'log_viewer_max_bytes' => max(64_000, (int) env('HMS_LOG_VIEWER_MAX_BYTES', 2_097_152)),
+
+    /*
+    |--------------------------------------------------------------------------
     | Clinic branding (receipts / print)
     |--------------------------------------------------------------------------
     */

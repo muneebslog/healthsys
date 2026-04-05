@@ -132,6 +132,9 @@
                         <flux:sidebar.item icon="arrow-top-right-on-square" :href="route('admin.lab-api-logs')" :current="request()->routeIs('admin.lab-api-logs')" wire:navigate>
                             {{ __('Lab API log') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="exclamation-triangle" :href="route('admin.application-logs')" :current="request()->routeIs('admin.application-logs')" wire:navigate>
+                            {{ __('Application log') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="chart-bar" :href="route('admin.queue-insights')" :current="request()->routeIs('admin.queue-insights') || request()->routeIs('admin.queue-insights.show')" wire:navigate>
                             {{ __('Queue insights') }}
                         </flux:sidebar.item>
