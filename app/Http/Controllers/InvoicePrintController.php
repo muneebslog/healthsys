@@ -60,6 +60,12 @@ class InvoicePrintController extends Controller
 
             $discountAmount = 0;
             $showRxHandwritingBlock = false;
+
+            // Calculate procedure payment summary for receipt
+            $procedurePackagePrice = (int) $proc?->package_price;
+            $procedureTotalPaid = (int) $proc?->totalPaidAmount();
+            $procedureBalance = $procedurePackagePrice - $procedureTotalPaid;
+            $paymentNote = $invoice->payment_note;
         } else {
             $visitServices = VisitService::query()
                 ->where('visit_id', $invoice->visit_id)
@@ -126,6 +132,10 @@ class InvoicePrintController extends Controller
             'labCaseInvoiceUrl' => $labCaseInvoiceUrl,
             'labCaseQrDataUri' => $labCaseQrDataUri,
             'labSampleSlipLines' => $labSampleSlipLines,
+            'procedurePackagePrice' => $procedurePackagePrice ?? null,
+            'procedureTotalPaid' => $procedureTotalPaid ?? null,
+            'procedureBalance' => $procedureBalance ?? null,
+            'paymentNote' => $paymentNote ?? null,
         ]);
     }
 }

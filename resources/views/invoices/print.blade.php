@@ -272,6 +272,122 @@
             border-bottom: 2px solid #111;
         }
         .sample-tests-table td.num { text-align: right; white-space: nowrap; }
+        
+        /* Procedure receipt styles */
+        .procedure-patient-block {
+            text-align: center;
+            margin: 12px 0 14px;
+            padding: 12px 8px;
+            border: 2px solid #111;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .procedure-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 4px;
+            color: #444;
+        }
+        .procedure-patient-name {
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 4px;
+            color: #000;
+        }
+        .procedure-room {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .procedure-summary {
+            margin: 16px 0;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+        }
+        .procedure-summary-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #495057;
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .procedure-summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 6px;
+            font-size: 11px;
+        }
+        .procedure-summary-row:last-child { margin-bottom: 0; }
+        .procedure-summary-label {
+            color: #6c757d;
+            font-weight: 600;
+        }
+        .procedure-summary-value {
+            font-weight: 700;
+            color: #212529;
+            font-variant-numeric: tabular-nums;
+        }
+        .procedure-summary-row.paid { color: #0f5132; }
+        .procedure-summary-row.paid .procedure-summary-label { color: #198754; }
+        .procedure-summary-row.paid .procedure-summary-value { color: #0f5132; font-weight: 800; }
+        .procedure-summary-row.balance { 
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 2px solid #dc3545;
+        }
+        .procedure-summary-row.balance .procedure-summary-label { 
+            color: #dc3545; 
+            font-weight: 800;
+            font-size: 12px;
+        }
+        .procedure-summary-row.balance .procedure-summary-value { 
+            color: #dc3545; 
+            font-weight: 900;
+            font-size: 14px;
+        }
+        .procedure-summary-row.total { 
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 2px solid #111;
+        }
+        .procedure-summary-row.total .procedure-summary-label { 
+            font-weight: 800;
+            font-size: 12px;
+        }
+        .procedure-summary-row.total .procedure-summary-value { 
+            font-weight: 900;
+            font-size: 14px;
+        }
+        .procedure-payment-note {
+            margin-top: 10px;
+            padding: 8px;
+            background: #fff;
+            border-left: 3px solid #ffc107;
+            font-size: 10px;
+            color: #664d03;
+            font-style: italic;
+        }
+        .procedure-payment-note-label {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 8px;
+            letter-spacing: 0.06em;
+            color: #997404;
+            margin-bottom: 2px;
+            font-style: normal;
+        }
+        
         @media print {
             body { padding: 4px 6px; max-width: none; }
         }
@@ -292,89 +408,164 @@
             && ! empty($labCaseInvoiceUrl ?? null);
     @endphp
 
-    <div class="patient-block">
-        <div class="patient-name">{{ $invoice->patient?->name ?? '—' }}</div>
-        @if ($labQrInHero)
-            <div class="token-label">{{ __('Lab portal') }}</div>
-            <div class="lab-qr-hero">
-                <img src="{{ $labCaseQrDataUri }}" width="120" height="120" alt="{{ __('QR code') }}" />
-                <div class="lab-qr-url">{{ $labCaseInvoiceUrl }}</div>
+    {{-- Procedure Invoice: Professional Header (no token box) --}}
+    @if ($isProcedureInvoice ?? false)
+        <div class="procedure-patient-block">
+            <div class="procedure-label">{{ __('Patient') }}</div>
+            <div class="procedure-patient-name">{{ $invoice->patient?->name ?? '—' }}</div>
+            @if ($invoice->procedure?->room_number)
+                <div class="procedure-room">{{ __('Room') }} {{ $invoice->procedure->room_number }}</div>
+            @endif
+        </div>
+    @else
+        <div class="patient-block">
+            <div class="patient-name">{{ $invoice->patient?->name ?? '—' }}</div>
+            @if ($labQrInHero)
+                <div class="token-label">{{ __('Lab portal') }}</div>
+                <div class="lab-qr-hero">
+                    <img src="{{ $labCaseQrDataUri }}" width="120" height="120" alt="{{ __('QR code') }}" />
+                    <div class="lab-qr-url">{{ $labCaseInvoiceUrl }}</div>
+                </div>
+            @else
+                <div class="token-label">{{ ($isLabInvoice ?? false) ? __('Lab portal') : __('Token') }}</div>
+                @if ($isLabInvoice ?? false)
+                    <div class="token-hero">—</div>
+                @elseif ($rowsWithToken->isEmpty())
+                    <div class="token-hero">—</div>
+                @elseif (! $multiService || $rowsWithToken->count() === 1)
+                    <div class="token-hero">{{ $rowsWithToken->first()['token_number'] }}</div>
+                @else
+                    @foreach ($rows as $row)
+                        @if (filled($row['token_number'] ?? null))
+                            <div class="token-stack-item">
+                                <div class="token-service-prefix">{{ $row['token_prefix'] }} · {{ $row['service'] }}</div>
+                                <div class="token-hero-stacked">{{ $row['token_number'] }}</div>
+                            </div>
+                        @endif
+                    @endforeach
+                @endif
+            @endif
+        </div>
+    @endif
+
+    @if ($isProcedureInvoice ?? false)
+        {{-- Procedure Invoice: Professional Service Table (no token column) --}}
+        <table>
+            <thead>
+                <tr>
+                    <th>{{ __('Procedure') }}</th>
+                    <th class="doc">{{ __('Doctor') }}</th>
+                    <th class="num">{{ __('Amount') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($rows as $row)
+                    <tr>
+                        <td>{{ $row['service'] }}</td>
+                        <td class="doc">{{ $row['doctor'] }}</td>
+                        <td class="num">{{ number_format($row['price']) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        {{-- Procedure Payment Summary --}}
+        @if ($procedurePackagePrice !== null && $procedurePackagePrice > 0)
+            <div class="procedure-summary">
+                <div class="procedure-summary-title">{{ __('Payment Summary') }}</div>
+                <div class="procedure-summary-row">
+                    <span class="procedure-summary-label">{{ __('Package Price') }}</span>
+                    <span class="procedure-summary-value">{{ number_format($procedurePackagePrice) }}</span>
+                </div>
+                <div class="procedure-summary-row paid">
+                    <span class="procedure-summary-label">{{ __('This Payment') }}</span>
+                    <span class="procedure-summary-value">{{ number_format((int) $invoice->final_amount) }}</span>
+                </div>
+                <div class="procedure-summary-row paid">
+                    <span class="procedure-summary-label">{{ __('Total Paid') }}</span>
+                    <span class="procedure-summary-value">{{ number_format($procedureTotalPaid) }}</span>
+                </div>
+                <div class="procedure-summary-row balance">
+                    <span class="procedure-summary-label">{{ __('Remaining Payable') }}</span>
+                    <span class="procedure-summary-value">{{ number_format(max(0, $procedureBalance)) }}</span>
+                </div>
+                @if (filled($paymentNote))
+                    <div class="procedure-payment-note">
+                        <div class="procedure-payment-note-label">{{ __('Note') }}</div>
+                        {{ $paymentNote }}
+                    </div>
+                @endif
             </div>
         @else
-            <div class="token-label">{{ ($isLabInvoice ?? false) ? __('Lab portal') : __('Token') }}</div>
-            @if ($isLabInvoice ?? false)
-                <div class="token-hero">—</div>
-            @elseif ($rowsWithToken->isEmpty())
-                <div class="token-hero">—</div>
-            @elseif (! $multiService || $rowsWithToken->count() === 1)
-                <div class="token-hero">{{ $rowsWithToken->first()['token_number'] }}</div>
-            @else
-                @foreach ($rows as $row)
-                    @if (filled($row['token_number'] ?? null))
-                        <div class="token-stack-item">
-                            <div class="token-service-prefix">{{ $row['token_prefix'] }} · {{ $row['service'] }}</div>
-                            <div class="token-hero-stacked">{{ $row['token_number'] }}</div>
-                        </div>
-                    @endif
-                @endforeach
+            {{-- Fallback for procedures without package price --}}
+            <div class="total-row">
+                <span class="total-label">{{ __('This Payment') }}</span>
+                <span class="total-amount">{{ number_format((int) $invoice->final_amount) }}</span>
+            </div>
+            @if (filled($paymentNote))
+                <div class="procedure-payment-note">
+                    <div class="procedure-payment-note-label">{{ __('Note') }}</div>
+                    {{ $paymentNote }}
+                </div>
             @endif
         @endif
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th class="num">{{ __('Token') }}</th>
-                <th>
-                    @if ($isLabInvoice ?? false)
-                        {{ __('Test') }}
-                    @elseif ($isProcedureInvoice ?? false)
-                        {{ __('Procedure') }}
-                    @else
-                        {{ __('Service') }}
-                    @endif
-                </th>
-                <th class="doc">{{ ($isLabInvoice ?? false) ? __('Source') : __('Doctor') }}</th>
-                <th class="num">{{ __('Price') }}</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($rows as $row)
+    @else
+        {{-- Regular/Lab Invoice: Standard Table with Token Column --}}
+        <table>
+            <thead>
                 <tr>
-                    <td class="num tabular-nums">
-                        @if (filled($row['token_number'] ?? null))
-                            @if ($multiService)
-                                {{ $row['token_prefix'] }}·{{ $row['token_number'] }}
-                            @else
-                                {{ $row['token_number'] }}
-                            @endif
+                    <th class="num">{{ __('Token') }}</th>
+                    <th>
+                        @if ($isLabInvoice ?? false)
+                            {{ __('Test') }}
                         @else
-                            —
+                            {{ __('Service') }}
                         @endif
-                    </td>
-                    <td>{{ $row['service'] }}</td>
-                    <td class="doc">{{ $row['doctor'] }}</td>
-                    <td class="num">{{ number_format($row['price']) }}</td>
+                    </th>
+                    <th class="doc">{{ ($isLabInvoice ?? false) ? __('Source') : __('Doctor') }}</th>
+                    <th class="num">{{ __('Price') }}</th>
                 </tr>
-            @endforeach
-        </tbody>
-    </table>
-
-    @if ($showDiscountRow)
-        <table style="margin-top: 6px;">
+            </thead>
             <tbody>
-                <tr class="discount-row">
-                    <td colspan="3">{{ __('Discount') }}</td>
-                    <td class="num">−{{ number_format($discountAmount) }}</td>
-                </tr>
+                @foreach ($rows as $row)
+                    <tr>
+                        <td class="num tabular-nums">
+                            @if (filled($row['token_number'] ?? null))
+                                @if ($multiService)
+                                    {{ $row['token_prefix'] }}·{{ $row['token_number'] }}
+                                @else
+                                    {{ $row['token_number'] }}
+                                @endif
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td>{{ $row['service'] }}</td>
+                        <td class="doc">{{ $row['doctor'] }}</td>
+                        <td class="num">{{ number_format($row['price']) }}</td>
+                    </tr>
+                @endforeach
             </tbody>
         </table>
     @endif
 
-    <div class="total-row">
-        <span class="total-label">{{ __('Total') }}</span>
-        <span class="total-amount">{{ number_format((int) $invoice->final_amount) }}</span>
-    </div>
+    @if (!($isProcedureInvoice ?? false))
+        @if ($showDiscountRow)
+            <table style="margin-top: 6px;">
+                <tbody>
+                    <tr class="discount-row">
+                        <td colspan="3">{{ __('Discount') }}</td>
+                        <td class="num">−{{ number_format($discountAmount) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        @endif
+
+        <div class="total-row">
+            <span class="total-label">{{ __('Total') }}</span>
+            <span class="total-amount">{{ number_format((int) $invoice->final_amount) }}</span>
+        </div>
+    @endif
 
     @if ($showRxHandwritingBlock ?? false)
         <div class="rx-handwriting-block" aria-hidden="true">
